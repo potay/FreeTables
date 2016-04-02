@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <!--Import Google Icon Font-->
+    <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!--Import materialize.css-->
+    <link type="text/css" rel="stylesheet" href="css/materialize.min.css"  media="screen,projection"/>
+
+    <!--Let browser know website is optimized for mobile-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  </head>
+
+  <body>
+
+    <div class="row light-blue darken-3 white-text">
+      <div class="col s12">
+        <div class="container">
+          <h1 class="center-align">FreeTables</h1>
+          <p class="center-align">By <a href="http://paulchun.com" target="_blank">Paul Chun</a> & Mark Fernandez</p>
+          <br>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col s12">
+        <div class="container">
+
+          <div class="section">
+            <h4>What is this in one line?</h4>
+            <p>CAS-based lock-free list (CAS is compare and swap) with lock-free hash table upon it.</p>
+          </div>
+          <div class="divider"></div>
+
+          <div class="section">
+            <h4>What is this?</h4>
+            <p>We will implement a compare and swap based lock-free linked list that supports insert and delete and will build a hash-table that supports insert, delete and lookup upon it.</p>
+            <p>The algorithms for implementing the following can be found <a href="http://www.research.ibm.com/people/m/michael/spaa-2002.pdf">here</a>.</p>
+          </div>
+          <div class="divider"></div>
+
+          <div class="section">
+            <h4>What should I know to understand this project?</h4>
+            <p>In parallel programs, multiple threads need to read and modify shared data structures. One way to ensure that the programs updates is correct is to allow the updates to the shared data structures to happen atomically. This involves introducing locking mechanisms in the shared data structures such as global locks and fine grain locks.</p> 
+            <p>However, adding locks increase contention. Contention slows down the performance of parallel programs. At high-thread counts, lock free data structures can perform better than even data-structures with fine-grained locks. Thus the motivation for lock-free data-structures (<a href="http://15418.courses.cs.cmu.edu/spring2016/lecture/lockfree/slide_032">more info</a>).</p>
+            <p>We wish to implement a lock-free linked list that can be used as a basis to develop a lock free hash table. The hash-table is a commonly used data structure. It is used in a wide variety of applications that require constant time lookup. A correct, efficient lock-free hash-table can significantly speed up parallel programs. </p>
+            <p>In fact, if we still have time we will extend our implementation to implement a parallel binary decision package. Binary decision diagrams have applications to verification, AI planning, and combinatorial optimization and the commonly known packages are sequential. </p>
+          </div>
+
+          <div class="section">
+            <h4>How is this challenging</h4>
+            <p>Our workload will consists of a sequence of inserts and deletes into first the linked list and later once we have implemented a hash table inserts, deletes and lookups into the hash table. We need to come up with a workload that deals with conditions when there are a large number of inserts relative to deletes and vice versa. </p>
+            <p>We also need to measure generate workload that is suitable to hashing. </p>
+
+            <ul>
+              <li><p><b>Correctness</b>: Correctness is our major challenges. Multiple threads will be attempting to insert and delete into the linked list and insert/delete into the hash-table. We have to make sure that the threads correctly update the state of the data-structure so that we do not lose elements, dereference null pointers etc. We also have to make sure that the memory is managed properly and that all allocated data-structures are freed. </p></li>
+              <li><p><b>Efficiency</b>: Efficiency is another one of our concerns. We will be developing for the Xeon Phi and have to ensure that all twenty four execution contexts can operate on the shared data-structure without significantly slowing down the performance. For example once we get the hash table working, we may have false sharing that could occur when threads from processors (each processor has a separate L3) make requests to data that hashes to the same location. </p></li>
+            </ul>
+          </div>
+          <div class="divider"></div>
+
+          <div class="section">
+            <h4>What resources do we have?</h4>
+            <p>The algorithms for implementing our project can be found described <a href="http://www.research.ibm.com/people/m/michael/spaa-2002.pdf">here</a>. There are also several papers online that we can think about.</p>
+            <p>We are reading through the <a href="https://www.cs.cmu.edu/~crary/papers/2015/rmc.pdf">CMU research system RMC</a> (extensions to C) and trying to figure out if we can use it.</p>
+          </div>
+          <div class="divider"></div>
+
+          <div class="section">
+            <h4>What are our goals and deliverables?</h4>
+            <b>What do we plan to achieve?</b>
+            <ol>
+              <li>Implement a correct, efficient CAS-based lock-free list that supports insertion and deletion.</li>
+              <li>Test and measure its performance versus a list implemented using  single grained and fine-grained locks for varying thread counts. </li>
+              <li>Implement a  correct, efficient lock-free working hash table that supports insertion, deletion and lookup. </li>
+              <li>Test and measure its performance versus a hash table implemented using  single grained and fine-grained locks varying thread counts.</li>
+            </ol>
+            <b>What do we hope to achieve?</b>
+            <ol>
+              <li>Parallelize a binary decision diagram package on the Phi.  Only if project goes spectacularly well though. </li>
+            </ol>
+            <b>Which platform(s) will we be building this on?</b>
+            <p>We will be developing in C as we are both familiar with C. We thought about using Java but neither of us are too familiar with it.</p>
+            <p>We wish to develop on the Phi as we have access to it and have worked with it before. </p>
+          </div>
+          <div class="divider"></div>
+
+          <div class="section">
+            <h4>What is the project schedule?</h4>
+            <table class="bordered responsive-table">
+              <thead>
+                <tr>
+                  <th>Week</th>
+                  <th>Progress</th>
+                </tr>
+              <thead>
+              <tbody>
+                <tr>
+                  <td rowspan="4">Week 1</td>
+                  <td>Implement a linked list with global lock.</td>
+                </tr>
+                <tr>
+                  <td>Implement a test harness to check correctness of linked list.</td>
+                </tr>
+                <tr>
+                  <td>Implement linked list with fine-grained lock.</td>
+                </tr>
+                <tr>
+                  <td>Implement a basic lock-free linked list.</td>
+                </tr>
+
+                <tr>
+                  <td rowspan="3">Week 2 (Checkpoint)</td>
+                  <td>Implement a hash-table with global locks and fine-grained locking.</td>
+                </tr>
+                <tr>
+                  <td>Test it and so update the test harness for a correct hash table.</td>
+                </tr>
+                <tr>
+                  <td>Implement a lock free hash-table.</td>
+                </tr>
+
+                <tr>
+                  <td rowspan="3">Week 3</td>
+                  <td>Complete work from previous weeks.</td>
+                </tr>
+                <tr>
+                  <td>If we have a working lock-free hash-table at this point, we will read up about binary decision diagrams</td>
+                </tr>
+                <tr>
+                  <td>Hopefully figure out how a sequential binary decision diagram package works</td>
+                </tr>
+
+                <tr>
+                  <td>Week 4 (Project due)</td>
+                  <td>Parallelize the binary decision diagram package.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!--Import jQuery before materialize.js-->
+    <script type="text/javascript" src="js/jquery-2.2.2.min.js"></script>
+    <script type="text/javascript" src="js/materialize.min.js"></script>
+  </body>
+</html>
