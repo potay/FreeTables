@@ -20,7 +20,11 @@ $(eval $(call define_library,global_lock_ll, \
         $(INCLUDEDIR)/global_lock_ll/global_lock_linked_list.cpp      \
 ))
 
-run_tests: $(OBJDIR)/libglobal_lock_ll.a
+$(eval $(call define_library,text_color, \
+        $(INCLUDEDIR)/text_color/text_color.cpp      \
+))
+
+run_tests: $(OBJDIR)/libglobal_lock_ll.a $(OBJDIR)/libtext_color.a
 
 SHELL := /bin/bash
 

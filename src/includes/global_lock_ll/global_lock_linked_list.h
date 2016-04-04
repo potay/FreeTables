@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string>
 #include <stdexcept>
+#include <cassert>
 
 template <class KeyType, class DataType>
 class GlobalLockLinkedListNode {
@@ -52,29 +53,32 @@ class GlobalLockLinkedListHeader {
     GlobalLockLinkedListNode<KeyType, DataType> *end;
 };
 
-// class GlobalLockLinkedListIterator {
-//   void(0);
-// };
 
+/* Note that KeyType must have an implementation for comparison operators */
 template <class KeyType, class DataType>
 class GlobalLockLinkedList {
   public:
     // Constructors
     GlobalLockLinkedList();
 
-    // Linked List operations
-    // inserts node in undefined order (will switch to a sorted order)
-    void insert(KeyType k, DataType d);
-    // No throw guarantee
+    /** Linked List operations **/
+    // if key does not exists, inserts node in undefined order (will switch to a sorted order) and returns true
+    // else returns false
+    bool insert(KeyType k, DataType d);
+    // Returns true if node with key k was found and remove was successful, else false.
     bool remove(KeyType k);
     // Returns a reference to data at node with key k. 
     // If k does not exist, throws out_of_range exception.
     DataType& at(KeyType k);
+    // Returns true if k is in list, else false
+    bool search(KeyType k);
     int size() { return header.get_size(); }
     bool empty() { return header.get_size() == 0; }
 
   private:
     GlobalLockLinkedListHeader<KeyType, DataType> header;
+    // Returns pointer to node in list that has key k1 <= k, or NULL if no such node exists.
+    GlobalLockLinkedListNode<KeyType, DataType>* find(KeyType k);
 };
 
 
@@ -121,18 +125,46 @@ GlobalLockLinkedList<KeyType, DataType>::GlobalLockLinkedList() {
 }
 
 template <class KeyType, class DataType>
-void GlobalLockLinkedList<KeyType, DataType>::insert(KeyType k, DataType d) {
-  GlobalLockLinkedListNode<KeyType, DataType> *node = new GlobalLockLinkedListNode<KeyType, DataType>(k, d);
-  if (header.get_size() > 0) {
-    GlobalLockLinkedListNode<KeyType, DataType> *end_node = header.get_end();
-    end_node->set_next(node);
-    node->set_previous(end_node);
-    header.set_end(node);
+bool GlobalLockLinkedList<KeyType, DataType>::insert(KeyType k, DataType d) {
+  GlobalLockLinkedListNode<KeyType, DataType> *node = find(k);
+
+  if (node != NULL && node->get_key() == k) {
+    return false;
   } else {
-    header.set_start(node);
-    header.set_end(node);
+
+    GlobalLockLinkedListNode<KeyType, DataType> *new_node = new GlobalLockLinkedListNode<KeyType, DataType>(k, d);
+
+    if (node == NULL) {
+      if (header.get_start() != NULL) {
+        assert(header.get_start()->get_key() <= k);
+        header.get_start()->set_previous(new_node);
+        new_node->set_next(header.get_start());
+      }
+
+      header.set_start(new_node);
+      
+      if (header.get_end() == NULL) {
+        assert(header.get_size() == 0);
+        header.set_end(new_node);
+      }
+    } else {
+      new_node->set_previous(node);
+
+      if (node->get_next() == NULL) {
+        assert(header.get_end() == node);
+        header.set_end(new_node);
+      } else {
+        new_node->set_next(node->get_next());
+        node->get_next()->set_previous(node);
+      }
+
+      node->set_next(new_node);
+    }
+    
+    header.inc_size();
+    return true;
+
   }
-  header.inc_size();
 }
 
 template <class KeyType, class DataType>
@@ -160,10 +192,27 @@ bool GlobalLockLinkedList<KeyType, DataType>::remove(KeyType k) {
 
 template <class KeyType, class DataType>
 DataType& GlobalLockLinkedList<KeyType, DataType>::at(KeyType k) {
-  for (GlobalLockLinkedListNode<KeyType, DataType> *curr_node = header.get_start(); curr_node != NULL; curr_node = curr_node->get_next()) {
-    if (curr_node->get_key() == k) {
-      return curr_node->access_data();
-    }
+  GlobalLockLinkedListNode<KeyType, DataType> *node = find(k);
+  if (node != NULL && node->get_key() == k) {
+    return node->access_data();
   }
   throw std::out_of_range("Key does not exist.");;
+}
+
+template <class KeyType, class DataType>
+bool GlobalLockLinkedList<KeyType, DataType>::search(KeyType k) {
+  GlobalLockLinkedListNode<KeyType, DataType> *node = find(k);
+  return (node != NULL && node->get_key() == k);
+}
+
+template <class KeyType, class DataType>
+GlobalLockLinkedListNode<KeyType, DataType>* GlobalLockLinkedList<KeyType, DataType>::find(KeyType k) {
+  GlobalLockLinkedListNode<KeyType, DataType> *curr_node = header.get_start();
+  GlobalLockLinkedListNode<KeyType, DataType> *prev_node = NULL;
+  while (curr_node != NULL) {
+    if (k < curr_node->get_key()) break;
+    prev_node = curr_node;
+    curr_node = curr_node->get_next();
+  }
+  return prev_node;
 }
