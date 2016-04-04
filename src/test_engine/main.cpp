@@ -15,13 +15,12 @@
 #include "text_color/text_color.h"
 #include "global_lock_ll/global_lock_linked_list.h"
 
-#define DEBUG_LIST_PRINT true
-
 // Define the Key and Data type of the Linked-list here.
 typedef int KeyType;
 typedef std::string DataType;
 
 DEFINE_string(testfile, "tests/hello.txt", "Test file to run.");
+DEFINE_bool(debug_print_list, false, "Print a visualization of the linked-list after each test line for debugging purposes.");
 
 
 /* Splits a string by a delimiter and returns a vector of the tokens. */
@@ -154,6 +153,8 @@ bool run_testline(std::string testline, GlobalLockLinkedList<KeyType, DataType> 
              << "Size of Linked-List: " << ll.size() << " "
              << "Results: " 
              << (success ? color_green("success") : color_red("failed"));
+  DLOG_IF(INFO, FLAGS_debug_print_list) << "Visual: "
+                                        << color_yellow(ll.get_visual());
 
   return success;
 }
@@ -170,7 +171,7 @@ void run_tests(std::string testfile) {
   bool result;
   int error_count = 0;
 
-  while (!infile.good()) {
+  while (infile.good()) {
     getline(infile, testline);
     result = run_testline(testline, ll);
     all_test_success &= result;
@@ -185,6 +186,7 @@ void run_tests(std::string testfile) {
 
 int main(int argc, char *argv[]) {
   FLAGS_logtostderr = 1;
+  // FLAGS_log_dir = "logs";
 
   std::string usage("Usage: " + std::string(argv[0]) +
                     " [options] <test filepath>\n");

@@ -1,0 +1,124 @@
+insert 59 2 1
+remove 59 0
+insert 21 5 1
+insert 8 6 2
+insert 36 7 3
+remove 36 2
+insert 12 10 3
+insert 33 11 4
+insert 96 12 5
+insert 52 13 6
+insert 94 14 7
+remove 12 6
+remove 33 5
+remove 8 4
+remove 96 3
+remove 52 2
+remove 94 1
+insert 38 18 2
+insert 28 20 3
+insert 34 21 4
+insert 2 22 5
+insert 30 23 6
+remove 21 5
+remove 30 4
+remove 38 3
+remove 34 2
+remove 2 1
+insert 63 25 2
+remove 28 1
+insert 21 28 2
+insert 95 29 3
+insert 61 30 4
+remove 21 3
+remove 63 2
+remove 61 1
+insert 29 32 2
+remove 95 1
+remove 29 0
+insert 49 35 1
+insert 67 36 2
+insert 40 37 3
+insert 35 38 4
+insert 73 39 5
+insert 58 40 6
+insert 77 41 7
+insert 12 42 8
+insert 20 43 9
+insert 44 44 10
+remove 40 9
+remove 44 8
+remove 73 7
+remove 49 6
+remove 35 5
+remove 20 4
+insert 24 46 5
+insert 76 47 6
+remove 77 5
+remove 76 4
+remove 58 3
+remove 12 2
+remove 67 1
+remove 24 0
+insert 26 50 1
+insert 55 51 2
+insert 38 52 3
+insert 72 53 4
+insert 5 54 5
+remove 5 4
+remove 26 3
+remove 38 2
+remove 72 1
+remove 55 0
+insert 25 56 1
+insert 6 57 2
+insert 99 58 3
+insert 44 59 4
+insert 80 60 5
+insert 79 61 6
+insert 69 62 7
+insert 41 63 8
+remove 99 7
+remove 25 6
+remove 41 5
+remove 44 4
+remove 69 3
+remove 80 2
+insert 27 65 3
+remove 27 2
+remove 79 1
+remove 6 0
+insert 41 70 1
+remove 41 0
+insert 53 72 1
+insert 56 73 2
+insert 38 75 3
+insert 51 76 4
+remove 53 3
+remove 38 2
+remove 51 1
+remove 56 0
+insert 57 80 1
+insert 14 81 2
+insert 48 82 3
+remove 14 2
+insert 74 84 3
+insert 54 85 4
+remove 74 3
+insert 98 87 4
+insert 85 88 5
+insert 62 89 6
+remove 57 5
+remove 85 4
+remove 62 3
+remove 48 2
+remove 98 1
+remove 54 0
+insert 58 91 1
+remove 58 0
+insert 75 94 1
+insert 20 95 2
+insert 35 96 3
+insert 33 97 4
+insert 74 98 5
+insert 39 99 6
