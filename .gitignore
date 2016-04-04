@@ -2,7 +2,7 @@
 /deps
 /objs
 /logs
-/test_engine
+/run_tests
 
 # Compiled Object files
 *.slo

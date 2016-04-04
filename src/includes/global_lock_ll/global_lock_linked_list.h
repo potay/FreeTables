@@ -38,7 +38,7 @@ class GlobalLockLinkedListHeader {
     inline void set_size(int s) { size = s; }
     inline int get_size() { return size; }
     inline void inc_size() { size++; }
-    inline void dec_size() { size++; }
+    inline void dec_size() { size--; }
 
     inline void set_start(GlobalLockLinkedListNode<KeyType, DataType> *node) { start = node; }
     inline GlobalLockLinkedListNode<KeyType, DataType>* get_start() { return start; }

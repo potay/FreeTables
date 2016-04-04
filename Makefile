@@ -6,13 +6,13 @@ LOGDIR=logs.*
 
 # all should come first in the file, so it is the default target!
 .PHONY: all run clean cleanlogs
-all : test_engine
+all : run_tests
 
 # Define our wonderful make functions.
 include functions.mk
 
 # Include all sub directories.
-$(eval $(call define_program,test_engine, \
+$(eval $(call define_program,run_tests, \
         $(SRCDIR)/test_engine/main.cpp        \
 ))
 
@@ -20,7 +20,7 @@ $(eval $(call define_library,global_lock_ll, \
         $(INCLUDEDIR)/global_lock_ll/global_lock_linked_list.cpp      \
 ))
 
-test_engine: $(OBJDIR)/libglobal_lock_ll.a
+run_tests: $(OBJDIR)/libglobal_lock_ll.a
 
 SHELL := /bin/bash
 
@@ -54,7 +54,7 @@ $(DEPDIR)/%.d: $(SRCDIR)/%.cpp Makefile
 -include $(DEPS)
 
 clean:
-	rm -rf $(OBJDIR) $(DEPDIR) test_engine *.pyc
+	rm -rf $(OBJDIR) $(DEPDIR) run_tests *.pyc
 
 cleanlogs:
 	rm -rf $(LOGDIR)
