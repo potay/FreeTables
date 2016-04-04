@@ -13,6 +13,9 @@
 
 #include "global_lock_ll/global_lock_linked_list.h"
 
+typedef int KeyType;
+typedef std::string DataType;
+
 DEFINE_string(testfile, "tests/hello.txt", "Test files to run.");
 
 std::vector<std::string> split( const std::string &str, const char &delim ) {
@@ -31,9 +34,11 @@ std::vector<std::string> split( const std::string &str, const char &delim ) {
   return tokens;
 }
 
-bool process_testline(std::string testline, GlobalLockLinkedList& ll) {
+bool process_testline(std::string testline, GlobalLockLinkedList<KeyType, DataType> &ll) {
   DLOG(INFO) << "Testing line: \x1b[36m" << testline << "\x1b[0m";
   bool success = false;
+
+  (void)ll;
 
   std::vector<std::string> tokens = split(testline, ' ');
 
@@ -51,7 +56,7 @@ bool process_testline(std::string testline, GlobalLockLinkedList& ll) {
 void run_tests(std::string testfile) {
   DLOG(INFO) << "Starting tests in " << testfile << "...";
   bool all_test_success = false;
-  GlobalLockLinkedList ll = GlobalLockLinkedList();
+  GlobalLockLinkedList<KeyType, DataType> ll;
 
   std::ifstream infile;
   infile.open(testfile);
@@ -59,29 +64,28 @@ void run_tests(std::string testfile) {
 
   while (!infile.eof()) {
     getline(infile, testline);
-    all_test_success &= process_testline(testline, ll);
+    all_test_success = process_testline(testline, ll);
   }
   infile.close();
 
-  DLOG(INFO) << "Inserting 'Hello'...";
-  int id = ll.insert("Hello");
-  DLOG(INFO) << "Node ID: " << id;
+  KeyType k = 0;
+  DataType d = "Hello";
+
+  DLOG(INFO) << "Inserting " << k << ":'" << d << "'...";
+  ll.insert(k, d);
+  DLOG(INFO) << "Size of Linked-List: " << ll.size();
+  DLOG(INFO) << "Is Linked-List empty: " << ll.empty();
   
-  DLOG(INFO) << "Retrieving by id...";
-  std::string data = ll.get_data_by_id(id);
-  DLOG(INFO) << "Node Data: " << data;
-
-  DLOG(INFO) << "Checking if 'Hello' is in list via data...";
-  bool in_list = ll.data_in_list("Hello");
-  DLOG(INFO) << "Data is in list: " << in_list;
-
-  DLOG(INFO) << "Checking if 'Hello' is in list via id...";
-  in_list = ll.id_in_list(id);
-  DLOG(INFO) << "Data is in list: " << in_list;
+  DLOG(INFO) << "Retrieving by key...";
+  std::string data = ll.at(k);
+  DLOG(INFO) << "Node Key: " << k << ", Data: " << data;
 
   DLOG(INFO) << "Removing node...";
-  bool removed_it = ll.remove(id);
+  bool removed_it = ll.remove(k);
   DLOG(INFO) << "Successfully removed: " << removed_it;
+
+  DLOG(INFO) << "Size of Linked-List: " << ll.size();
+  DLOG(INFO) << "Is Linked-List empty: " << ll.empty();
 
   DLOG_IF(INFO, all_test_success) << "All tests ran successfully!";
 }

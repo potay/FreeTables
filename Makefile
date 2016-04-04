@@ -1,6 +1,6 @@
 OBJDIR=objs
 SRCDIR=src
-INCLUDEDIR=$(SRCDIR)/include
+INCLUDEDIR=$(SRCDIR)/includes
 DEPDIR=deps
 LOGDIR=logs.*
 
@@ -35,7 +35,7 @@ endif
 
 CXX=g++
 CXXFLAGS+=-Wall -Wextra -O2 -std=c++11
-CPPFLAGS+=-I$(CURDIR)/src/include $(foreach lib,$(LIBS), $(shell $(PKGCONFIG) --cflags $(lib)))
+CPPFLAGS+=-I$(CURDIR)/src/includes $(foreach lib,$(LIBS), $(shell $(PKGCONFIG) --cflags $(lib)))
 LDFLAGS+=-lpthread $(foreach lib,$(LIBS), $(shell $(PKGCONFIG) --libs $(lib))) -Xlinker -rpath -Xlinker external_lib
 
 $(LOGDIR):
