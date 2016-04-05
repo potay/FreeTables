@@ -49,9 +49,11 @@ std::vector<std::string> split( const std::string &str, const char &delim ) {
  *
  * Supported commands:
  *  insert node and test expected list size:
- *    insert <key> <value> <expected size>
+ *    insert <key> <value>
  *  get value at node identified by key and test expected value:
  *    at <key> <expected value>
+ *  search value at node identified by key:
+ *    search <key> <expected bool>
  *  remove node by key and test expected list size:
  *    remove <key> <expected size>
  */
@@ -114,10 +116,11 @@ bool process_testline(std::vector<std::string> tokens, LinkedList &ll) {
     }
     k = std::stoi(tokens[1]);
     DLOG(INFO) << "Searching by Key: " << k << "...";
-    if (ll.search(k)) {
+    bool expected = (std::stoi(tokens[2]) == 1) ? true : false;
+    if (ll.search(k) == expected) {
       return true;
     } else {
-      DLOG(WARNING) << color_red("Could not find key(" + std::to_string(k) + ").");
+      DLOG(WARNING) << color_red("Did not match expected result for key(" + std::to_string(k) + ").");
       return false;
     }
 
