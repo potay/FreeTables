@@ -1,2 +1,4 @@
 insert 0 hello 1
+search 0 1
+search 1 0
 remove 0 0
