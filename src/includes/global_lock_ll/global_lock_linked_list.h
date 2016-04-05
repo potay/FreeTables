@@ -247,5 +247,3 @@ std::string GlobalLockLinkedList<KeyType, DataType>::get_visual() {
 
   return ss.str();
 }
-
-
