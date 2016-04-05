@@ -13,6 +13,18 @@ struct LockFreeLinkedListBlock{
 };
 
 template <class KeyType, class DataType>
+bool operator==(const LockFreeLinkedListBlock<KeyType, DataType>& lhs, const LockFreeLinkedListBlock<KeyType, DataType>& rhs)
+{
+    return (lhs.mark == rhs.mark && lhs.next == rhs.next && lhs.tag == rhs.tag);
+}
+
+template <class KeyType, class DataType>
+bool operator!=(const LockFreeLinkedListBlock<KeyType, DataType>& lhs, const LockFreeLinkedListBlock<KeyType, DataType>& rhs)
+{
+    return (!(lhs == rhs));
+}
+
+template <class KeyType, class DataType>
 using LockFreeLinkedListAtomicBlock = std::atomic<LockFreeLinkedListBlock<KeyType, DataType>>;
 
 template <class KeyType, class DataType>
@@ -70,9 +82,10 @@ bool LockFreeLinkedList<KeyType, DataType>::insert(KeyType key, DataType data) {
     }
     LockFreeLinkedListBlock<KeyType, DataType> temp = pmark_cur_ptag.load();
     node->mark_next_tag.store(LockFreeLinkedListBlock<KeyType, DataType>{false, temp.next, 0});
-    if (prev->compare_exchange_weak(
-      LockFreeLinkedListBlock<KeyType, DataType>{false, temp.next, temp.tag},
-      LockFreeLinkedListBlock<KeyType, DataType>{false, node, temp.tag+1})) {
+
+    LockFreeLinkedListBlock<KeyType, DataType> expected = {false, temp.next, temp.tag};
+    LockFreeLinkedListBlock<KeyType, DataType> value = {false, node, temp.tag+1};
+    if (prev->compare_exchange_weak(expected, value)) {
       return true;
     }
   }
@@ -86,15 +99,15 @@ bool LockFreeLinkedList<KeyType, DataType>::remove(KeyType key) {
     LockFreeLinkedListBlock<KeyType, DataType> curr_temp = pmark_cur_ptag.load();
     LockFreeLinkedListBlock<KeyType, DataType> next_temp = cmark_next_ctag.load();
 
-    if ((curr_temp.next->mark_next_tag).compare_exchange_weak(
-      LockFreeLinkedListBlock<KeyType, DataType>{false, next_temp.next, next_temp.tag}, 
-      LockFreeLinkedListBlock<KeyType, DataType>{true, next_temp.next, next_temp.tag+1})) {
+    LockFreeLinkedListBlock<KeyType, DataType> expected = {false, next_temp.next, next_temp.tag};
+    LockFreeLinkedListBlock<KeyType, DataType> value = {true, next_temp.next, next_temp.tag+1};
+    if ((curr_temp.next->mark_next_tag).compare_exchange_weak(expected, value)) {
       continue;
     }
 
-    if (prev->compare_exchange_weak(
-      LockFreeLinkedListBlock<KeyType, DataType>{false, next_temp.next, next_temp.tag}, 
-      LockFreeLinkedListBlock<KeyType, DataType>{true, next_temp.next, next_temp.tag+1})) {
+    expected = {false, next_temp.next, next_temp.tag};
+    value = {true, next_temp.next, next_temp.tag+1};
+    if (prev->compare_exchange_weak(expected, value)) {
       // DeleteNode(cur);
       (void)0;
     } else {
@@ -122,19 +135,22 @@ try_again:
     if (curr_temp.next == NULL) return false;
 
     cmark_next_ctag.store(curr_temp.next->mark_next_tag.load());
-    KeyType ckey = curr_temp.next->Key;
+    KeyType ckey = curr_temp.next->key;
     
-    if (prev->load() != test(0, curr_temp.next, curr_temp.tag)) goto try_again;
+    LockFreeLinkedListBlock<KeyType, DataType> test = {0, curr_temp.next, curr_temp.tag};
+    if (prev->load() != test) goto try_again;
     
     if (!pmark_cur_ptag.load().mark) {
       if (ckey >= key) return ckey == key;
       prev = &(curr_temp.next->mark_next_tag);
     } else {
-      if (prev->compare_exchange_weak(
-        LockFreeLinkedListBlock<KeyType, DataType>{false, curr_temp.next, curr_temp.tag}, 
-        LockFreeLinkedListBlock<KeyType, DataType>{false, next_temp.next, curr_temp.tag+1})) {
+
+      LockFreeLinkedListBlock<KeyType, DataType> expected = {false, curr_temp.next, curr_temp.tag};
+      LockFreeLinkedListBlock<KeyType, DataType> value = {false, next_temp.next, curr_temp.tag+1};
+      if (prev->compare_exchange_weak(expected, value)) {
         // DeleteNode(cur);
-        cmark_next_ctag.store(temp(next_temp.mark, next_temp.next, curr_temp.tag+1));
+        LockFreeLinkedListBlock<KeyType, DataType> temp = {next_temp.mark, next_temp.next, curr_temp.tag+1};
+        cmark_next_ctag.store(temp);
       } else {
         goto try_again;
       }
