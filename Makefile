@@ -42,7 +42,7 @@ ifneq ($(strip $(LIBS_NOTFOUND)),)
 endif
 
 CXX=g++
-CXXFLAGS+=-Wall -Wextra -O2 -std=c++11 -latomic
+CXXFLAGS+=-Wall -Wextra -O2 -std=c++11 -latomic -g -O0
 CPPFLAGS+=-I$(CURDIR)/src/includes $(foreach lib,$(LIBS), $(shell $(PKGCONFIG) --cflags $(lib)))
 LDFLAGS+=-lpthread $(foreach lib,$(LIBS), $(shell $(PKGCONFIG) --libs $(lib))) -Xlinker -rpath -Xlinker external_lib
 
