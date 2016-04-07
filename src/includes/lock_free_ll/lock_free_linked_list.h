@@ -131,12 +131,12 @@ bool LockFreeLinkedList<KeyType, DataType>::insert(KeyType key, DataType data) {
   LockFreeLinkedListNode<KeyType, DataType> *node = new LockFreeLinkedListNode<KeyType, DataType>(key, data);
   print();
   while (true) {
-    DLOG(INFO) << "Inserting again (" << key << ":" << data << ")...";
+    // DLOG(INFO) << "Inserting again (" << key << ":" << data << ")...";
     if (find(key)) {
       delete node;
       return false;
     }
-    LockFreeLinkedListBlock<KeyType, DataType> temp = pmark_cur_ptag.load();
+    // LockFreeLinkedListBlock<KeyType, DataType> temp = pmark_cur_ptag.load();
     node->mark_next_tag.store(false, pmark_cur_ptag.load().next, 0);
 
     LockFreeLinkedListBlock<KeyType, DataType> expected = {false, pmark_cur_ptag.load().next, pmark_cur_ptag.load().tag};
@@ -144,9 +144,9 @@ bool LockFreeLinkedList<KeyType, DataType>::insert(KeyType key, DataType data) {
     if (prev->compare_exchange_weak(expected, value)) {
       return true;
     } else {
-      DLOG(INFO) << "Why no insert (" << key << ":" << data << ")...";
-      DLOG(INFO) << "What is (" << prev->load().mark << ":" << prev->load().next << ":" << prev->load().tag << ")...";
-      DLOG(INFO) << "What is expected (" << expected.mark << ":" << expected.next << ":" << expected.tag << ")...";
+      // DLOG(INFO) << "Why no insert (" << key << ":" << data << ")...";
+      // DLOG(INFO) << "What is (" << prev->load().mark << ":" << prev->load().next << ":" << prev->load().tag << ")...";
+      // DLOG(INFO) << "What is expected (" << expected.mark << ":" << expected.next << ":" << expected.tag << ")...";
     }
   }
 }
@@ -158,19 +158,24 @@ bool LockFreeLinkedList<KeyType, DataType>::remove(KeyType key) {
     if (!find(key)) return false;
     
     // LockFreeLinkedListBlock<KeyType, DataType> curr_temp = pmark_cur_ptag.load();
-    LockFreeLinkedListBlock<KeyType, DataType> next_temp = cmark_next_ctag.load();
+    // LockFreeLinkedListBlock<KeyType, DataType> next_temp = cmark_next_ctag.load();
 
     LockFreeLinkedListBlock<KeyType, DataType> expected = {false, cmark_next_ctag.load().next, cmark_next_ctag.load().tag};
     LockFreeLinkedListBlock<KeyType, DataType> value = {true, cmark_next_ctag.load().next, cmark_next_ctag.load().tag+1};
     if (!((pmark_cur_ptag.load().next->mark_next_tag).compare_exchange_weak(expected, value))) {
+      // DLOG(INFO) << "Why no remove (" << key << ")...";
+      // DLOG(INFO) << "What is (" << (pmark_cur_ptag.load().next->mark_next_tag).load().mark << ":" << (pmark_cur_ptag.load().next->mark_next_tag).load().next << ":" << (pmark_cur_ptag.load().next->mark_next_tag).load().tag << ")...";
+      // DLOG(INFO) << "What is expected (" << expected.mark << ":" << expected.next << ":" << expected.tag << ")...";
       continue;
     }
+    print();
 
     expected = {false, pmark_cur_ptag.load().next, pmark_cur_ptag.load().tag};
-    value = {true, cmark_next_ctag.load().next, pmark_cur_ptag.load().tag+1};
+    value = {false, cmark_next_ctag.load().next, pmark_cur_ptag.load().tag+1};
     if (prev->compare_exchange_weak(expected, value)) {
       // DeleteNode(cur);
       (void)0;
+      print();
     } else {
       find(key);
     }
@@ -190,7 +195,7 @@ try_again:
   prev = &head;
   pmark_cur_ptag.store(prev->load());
   while (true) {
-    LockFreeLinkedListBlock<KeyType, DataType> curr_temp = pmark_cur_ptag.load();
+    // LockFreeLinkedListBlock<KeyType, DataType> curr_temp = pmark_cur_ptag.load();
 
     if (pmark_cur_ptag.load().next == NULL) return false;
 
@@ -204,7 +209,7 @@ try_again:
     LockFreeLinkedListBlock<KeyType, DataType> test = {0, pmark_cur_ptag.load().next, pmark_cur_ptag.load().tag};
     if (prev->load() != test) goto try_again;
     
-    LockFreeLinkedListBlock<KeyType, DataType> next_temp = cmark_next_ctag.load();
+    // LockFreeLinkedListBlock<KeyType, DataType> next_temp = cmark_next_ctag.load();
 
     if (!pmark_cur_ptag.load().mark) {
       if (ckey >= key) return ckey == key;
@@ -225,15 +230,16 @@ try_again:
 
 template <class KeyType, class DataType>
 void LockFreeLinkedList<KeyType, DataType>::print() {
-  prev = &head;
-  std::stringstream ss;
-  ss << "head";
-  while (true) {
-    LockFreeLinkedListNode<KeyType, DataType> *curr = prev->load().next;
-    if (curr == NULL) break;
-    ss << "->" << curr->key << ":" << curr->data;
-    prev = &(curr->mark_next_tag);
-  }
-  ss << "->foot";
-  DLOG(INFO) << ss.str();
+  (void)0;
+  // LockFreeLinkedListAtomicBlock<KeyType, DataType> boo = head;
+  // std::stringstream ss;
+  // ss << "head";
+  // while (true) {
+  //   LockFreeLinkedListNode<KeyType, DataType> *curr = boo.load().next;
+  //   if (curr == NULL) break;
+  //   ss << "->" << curr->mark_next_tag.load().mark << ":" << curr->mark_next_tag.load().tag << ":" << curr->key << ":" << curr->data;
+  //   boo = curr->mark_next_tag;
+  // }
+  // ss << "->foot";
+  // DLOG(INFO) << ss.str();
 }
