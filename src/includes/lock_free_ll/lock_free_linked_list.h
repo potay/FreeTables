@@ -189,8 +189,8 @@ try_again:
     if (pmark_cur_ptag.load().next == NULL) return false;
 
     LockFreeLinkedListBlock<KeyType, DataType> temp = pmark_cur_ptag.load();
-    LockFreeLinkedListNode<KeyType, DataType> *curr_node = temp.next;
-    LockFreeLinkedListAtomicBlock<KeyType, DataType> *curr_node_atomic_block_ptr = &(curr_node->mark_next_tag);
+    LockFreeLinkedListNode<KeyType, DataType> *curr_node_ptr = temp.next;
+    LockFreeLinkedListAtomicBlock<KeyType, DataType> *curr_node_atomic_block_ptr = &(curr_node_ptr->mark_next_tag);
     LockFreeLinkedListBlock<KeyType, DataType> curr_node_atomic_block = (*curr_node_atomic_block_ptr).load();
     cmark_next_ctag.store(curr_node_atomic_block);
     KeyType ckey = pmark_cur_ptag.load().next->key;
