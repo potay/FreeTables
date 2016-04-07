@@ -162,12 +162,12 @@ bool LockFreeLinkedList<KeyType, DataType>::remove(KeyType key) {
 
     LockFreeLinkedListBlock<KeyType, DataType> expected = {false, cmark_next_ctag.load().next, cmark_next_ctag.load().tag};
     LockFreeLinkedListBlock<KeyType, DataType> value = {true, cmark_next_ctag.load().next, cmark_next_ctag.load().tag+1};
-    if ((pmark_cur_ptag.load().next->mark_next_tag).compare_exchange_weak(expected, value)) {
+    if (!((pmark_cur_ptag.load().next->mark_next_tag).compare_exchange_weak(expected, value))) {
       continue;
     }
 
-    expected = {false, cmark_next_ctag.load().next, cmark_next_ctag.load().tag};
-    value = {true, cmark_next_ctag.load().next, cmark_next_ctag.load().tag+1};
+    expected = {false, pmark_cur_ptag.load().next, pmark_cur_ptag.load().tag};
+    value = {true, cmark_next_ctag.load().next, pmark_cur_ptag.load().tag+1};
     if (prev->compare_exchange_weak(expected, value)) {
       // DeleteNode(cur);
       (void)0;
