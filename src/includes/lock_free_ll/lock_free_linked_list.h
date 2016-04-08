@@ -1,10 +1,12 @@
 #include <gflags/gflags.h>
 #include <glog/logging.h>
 
+// #include <type_traits>
+
 #include <atomic>
 #include <sstream>
 
-typedef int TagType;
+typedef uintptr_t TagType;
 
 template <class KeyType, class DataType>
 class LockFreeLinkedListNode;
@@ -29,58 +31,55 @@ bool operator!=(const LockFreeLinkedListBlock<KeyType, DataType>& lhs, const Loc
 template <class KeyType, class DataType>
 class LockFreeLinkedListAtomicBlock {
   public:
-    void store(const bool mark, const LockFreeLinkedListNode<KeyType, DataType> *next, const TagType tag) {
-      uintptr_t pointer = (mark ? ((uintptr_t)(next) | (uintptr_t)1) : ((uintptr_t)next & (~(uintptr_t)1)));
-      LockFreeLinkedListInternalBlock b = {pointer, tag};
-      // block.store(b);
-      block = b;
+    void store(const LockFreeLinkedListBlock<KeyType, DataType>& b) {
+      LockFreeLinkedListInternalBlock new_block = block_to_internal(b);
+      // bool hooha = std::is_trivially_copyable<LockFreeLinkedListInternalBlock>::value;
+      block.store(new_block);
+      // block = new_block;
     }
 
-    void store(const LockFreeLinkedListBlock<KeyType, DataType>& b) {
-      // block.store(block_to_internal(b));
-      LockFreeLinkedListInternalBlock new_block = block_to_internal(b);
-      block = new_block;
+    void store(bool mark, LockFreeLinkedListNode<KeyType, DataType> *next, TagType tag) {
+      LockFreeLinkedListBlock<KeyType, DataType> b = {mark, next, tag};
+      store(b);
     }
 
     LockFreeLinkedListBlock<KeyType, DataType> load() {
-      // LockFreeLinkedListInternalBlock b = block.load();
-      LockFreeLinkedListInternalBlock b = block;
+      LockFreeLinkedListInternalBlock b = block.load();
+      // LockFreeLinkedListInternalBlock b = block;
       return internal_to_block(b);
     }
 
     bool compare_exchange_weak(const LockFreeLinkedListBlock<KeyType, DataType>& expected, const LockFreeLinkedListBlock<KeyType, DataType>& value) {
       LockFreeLinkedListInternalBlock new_expected = block_to_internal(expected);
       LockFreeLinkedListInternalBlock new_value = block_to_internal(value);
-      // return block.compare_exchange_weak(new_expected, new_value);
-      if (block.pointer == new_expected.pointer && block.tag == new_expected.tag) {
-        block = new_value;
-        return true;
-      } else {
-        return false;
-      }
+      return block.compare_exchange_weak(new_expected, new_value);
+      // if (block.pointer == new_expected.pointer && block.tag == new_expected.tag) {
+      //   block = new_value;
+      //   return true;
+      // } else {
+      //   return false;
+      // }
     }
 
-    LockFreeLinkedListAtomicBlock() {
-      store(false, NULL, 0);
-    }
+    LockFreeLinkedListAtomicBlock() : block({(uintptr_t)0}) {};
 
   private:
     struct LockFreeLinkedListInternalBlock { 
       uintptr_t pointer; 
-      TagType tag; 
+      // TagType tag; 
     };
-    // std::atomic<LockFreeLinkedListInternalBlock> block;
-    LockFreeLinkedListInternalBlock block;
+    std::atomic<LockFreeLinkedListInternalBlock> block;
+    // LockFreeLinkedListInternalBlock block;
 
     inline LockFreeLinkedListInternalBlock block_to_internal(const LockFreeLinkedListBlock<KeyType, DataType>& b) {
-      LockFreeLinkedListInternalBlock new_block = {(b.mark ? ((uintptr_t)(b.next) | (uintptr_t)1) : ((uintptr_t)(b.next) & (~(uintptr_t)1))), b.tag};
+      LockFreeLinkedListInternalBlock new_block = {(b.mark ? ((uintptr_t)(b.next) | (uintptr_t)1) : ((uintptr_t)(b.next) & (~(uintptr_t)1)))};//, b.tag};
       return new_block;
     }
     inline LockFreeLinkedListBlock<KeyType, DataType> internal_to_block(const LockFreeLinkedListInternalBlock& b) {
       bool mark = ((b.pointer & (uintptr_t)1) == (uintptr_t)1) ? true : false;
       LockFreeLinkedListNode<KeyType, DataType> *next = (LockFreeLinkedListNode<KeyType, DataType> *)(b.pointer & (~(uintptr_t)1));
-      TagType tag = b.tag;
-      LockFreeLinkedListBlock<KeyType, DataType> new_block = {mark, next, tag};
+      // TagType tag = b.tag;
+      LockFreeLinkedListBlock<KeyType, DataType> new_block = {mark, next, (TagType)0};
       return new_block;
     }
 };
@@ -107,6 +106,13 @@ class LockFreeLinkedList {
     bool remove(KeyType key);
     // Returns true if k is in list, else false
     bool search(KeyType key);
+
+    LockFreeLinkedList() {
+      // head.store(false, NULL, 0);
+      prev = NULL;
+      // pmark_cur_ptag.store(false, NULL, 1);
+      // cmark_next_ctag.store(false, NULL, 2);
+    }
 
   private:
     LockFreeLinkedListAtomicBlock<KeyType, DataType> head;
