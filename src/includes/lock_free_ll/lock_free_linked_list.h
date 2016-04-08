@@ -91,7 +91,6 @@ class LockFreeLinkedListNode {
     KeyType key;
     DataType data;
     LockFreeLinkedListAtomicBlock<KeyType, DataType> mark_next_tag;
-
     LockFreeLinkedListNode(KeyType k, DataType d) { key = k; data = d; }
 };
 
@@ -190,10 +189,10 @@ try_again:
     if (pmark_cur_ptag.load().next == NULL) return false;
 
     LockFreeLinkedListBlock<KeyType, DataType> temp = pmark_cur_ptag.load();
-    LockFreeLinkedListNode<KeyType, DataType> *blah = temp.next;
-    LockFreeLinkedListAtomicBlock<KeyType, DataType> *bloo = &(blah->mark_next_tag);
-    LockFreeLinkedListBlock<KeyType, DataType> bleh = (*bloo).load();
-    cmark_next_ctag.store(bleh);
+    LockFreeLinkedListNode<KeyType, DataType> *curr_node_ptr = temp.next;
+    LockFreeLinkedListAtomicBlock<KeyType, DataType> *curr_node_atomic_block_ptr = &(curr_node_ptr->mark_next_tag);
+    LockFreeLinkedListBlock<KeyType, DataType> curr_node_atomic_block = (*curr_node_atomic_block_ptr).load();
+    cmark_next_ctag.store(curr_node_atomic_block);
     KeyType ckey = pmark_cur_ptag.load().next->key;
     
     temp = pmark_cur_ptag.load();
