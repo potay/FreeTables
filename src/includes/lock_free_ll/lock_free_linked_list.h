@@ -37,8 +37,8 @@ class LockFreeLinkedListAtomicBlock {
     }
 
     void store(const LockFreeLinkedListBlock<KeyType, DataType>& b) {
-      LockFreeLinkedListInternalBlock new_block = block_to_internal(b);
       // block.store(block_to_internal(b));
+      LockFreeLinkedListInternalBlock new_block = block_to_internal(b);
       block = new_block;
     }
 
@@ -165,7 +165,7 @@ bool LockFreeLinkedList<KeyType, DataType>::remove(KeyType key) {
     expected = {false, curr_temp.next, curr_temp.tag};
     value = {false, next_temp.next, curr_temp.tag+1};
     if (prev->compare_exchange_weak(expected, value)) {
-      // DeleteNode(cur);
+      // DeleteNode(curr_temp.next);
       (void)0;
       print();
     } else {
@@ -209,7 +209,7 @@ try_again:
       LockFreeLinkedListBlock<KeyType, DataType> expected = {false, temp.next, temp.tag};
       LockFreeLinkedListBlock<KeyType, DataType> value = {false, next_temp.next, temp.tag+1};
       if (prev->compare_exchange_weak(expected, value)) {
-        // DeleteNode(cur);
+        // DeleteNode(temp.next);
         temp = pmark_cur_ptag.load();
         next_temp = cmark_next_ctag.load();
         cmark_next_ctag.store(next_temp.mark, next_temp.next, temp.tag+1);
