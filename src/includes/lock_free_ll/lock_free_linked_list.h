@@ -1,3 +1,4 @@
+
 #include <atomic>
 
 
@@ -40,10 +41,18 @@ struct MarkPtrType {
 };
 
 
-/*template <class KeyType, class DataType>
-bool operator!=(const MarkPtrType<KeyType, DataType>& lhs, const MarkPtrType<KeyType, DataType>& rhs) {
+template <class KeyType, class DataType>
+bool operator==(const MarkPtrType <KeyType, DataType> & lhs, const MarkPtrType <KeyType, DataType> & rhs) {
+  return (lhs.Mark == rhs.Mark && lhs.Next == rhs.Next && lhs.Tag == rhs.Tag);
+  return true;
+}
+
+
+template <class KeyType, class DataType>
+bool operator!=(const MarkPtrType <KeyType, DataType> & lhs, const MarkPtrType <KeyType, DataType> & rhs) {
   return (!(lhs == rhs));
-}*/
+}
+
 
 
 
@@ -123,9 +132,11 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
       cmark_next_ctag.store(curr->mark_next_tag);
 
       KeyType ckey = curr->Key;
+     
+      MarkPtrType <KeyType, DataType> test = {false, pmark_curr_ptag.load().Next, 
+                                  pmark_curr_ptag.load().Tag};
 
-      //if(prev->load() != test)goto try_again;
-
+      if( test!=test) goto try_again;
 
 
     }
@@ -134,5 +145,3 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
    return false;
 
 }
-
-
