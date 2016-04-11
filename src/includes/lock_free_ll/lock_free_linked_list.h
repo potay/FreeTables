@@ -13,6 +13,12 @@
 //**************************************//
 
 
+struct testCAS{
+   int testCASVal;
+};
+
+
+
 typedef int TagType;
 
 template <class KeyType, class DataType>
@@ -120,6 +126,19 @@ bool LockFreeLinkedList<KeyType, DataType>::search(KeyType key) {
 template <class KeyType, class DataType>
 bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
 
+  //compare_and_swap does not work with structs
+  //testCAS item = {10};
+  //__sync_bool_compare_and_swap(&item, item, item);
+
+  int dest = 0;
+  int expected = 0;
+  int value = 10;
+
+  __sync_bool_compare_and_swap(&dest, expected, value);
+  DLOG(INFO) << "Testing compare and swap " << dest ;
+
+
+
    try_again:
     prev = &head;
     pmark_curr_ptag.store(prev->load());
@@ -136,8 +155,20 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
       MarkPtrType <KeyType, DataType> test = {false, pmark_curr_ptag.load().Next, 
                                   pmark_curr_ptag.load().Tag};
 
-      if( test!=test) goto try_again;
+      if( prev->load()!=test) goto try_again;
 
+      if(!pmark_curr_ptag.load().Mark){
+        if (ckey >= key) return ckey == key;
+           MarkPtrType <KeyType, DataType> temp = curr->mark_next_tag;
+      }
+      else{
+
+         // if(//__sync_bool_compare_and_swap(&test, test, test)){
+         //    //Just compile;
+         // }
+        ;
+
+      }
 
     }
 
@@ -145,3 +176,4 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
    return false;
 
 }
+
