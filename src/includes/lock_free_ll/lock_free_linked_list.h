@@ -178,7 +178,7 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
     while (true) {
 
 
-      std::atomic <MarkPtrType <KeyType, DataType> > pmark_curr_ptag_temp = {pmark_curr_ptag.load()};
+
 
       NodeType <KeyType, DataType> * curr = {pmark_curr_ptag.load().Next};
 
@@ -207,20 +207,27 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
        when I try to use an overloaded operator*/
       if( prev->load()!=test) goto try_again;
 
-      /*if(!pmark_curr_ptag.load().Mark){
+      if(!pmark_curr_ptag.load().Mark){
         if (ckey >= key) return ckey == key;
           prev = &(pmark_curr_ptag.load().Next->mark_next_tag);
       }
       else{
+          
+          std::atomic <MarkPtrType <KeyType, DataType> > temp = {pmark_curr_ptag.load()};
+          
+          /*Why cant I convert {false, temp.Next, temp.Tag} to an atomic, I was
+          able to do it using my constructor when I initialized head.
+          std::atomic <MarkPtrType <KeyType, DataType> > expected = {false, temp.Next, temp.Tag};*/
+          
+          /*Why cant I access fields out of an atomic struct? 
+          Only loading an storing is supported according to stack overflow.
+          But why then was I able to do something like pmark_curr_ptag.load().Next*/
+          //<MarkPtrType <KeyType, DataType> > expected = {false, temp.Next, temp.Tag};
 
-          temp = pmark_curr_ptag.load();
 
-         // if(//__sync_bool_compare_and_swap(&test, test, test)){
-         //    //Just compile;
-         // }
-        ;
 
-      }*/
+
+      }
   
       
     } 
