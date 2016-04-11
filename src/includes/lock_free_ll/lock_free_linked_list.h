@@ -19,6 +19,16 @@ struct testCAS{
 
 
 
+
+template<typename T>
+struct node
+{
+    T data;
+    node* next;
+    node(const T& data) : data(data), next(nullptr) {}
+};
+
+
 typedef int TagType;
 
 template <class KeyType, class DataType>
@@ -30,8 +40,7 @@ template <class KeyType, class DataType>
 struct NodeType {
 
   KeyType Key;
-
-  MarkPtrType <KeyType, DataType> mark_next_tag;
+  std::atomic <MarkPtrType <KeyType, DataType> > mark_next_tag;
 
 };
 
@@ -41,7 +50,7 @@ template <class KeyType, class DataType>
 struct MarkPtrType {
 
   bool  Mark;
-  NodeType <KeyType, DataType>* Next;
+  NodeType <KeyType, DataType> * Next;
   TagType Tag;
 
 };
@@ -101,6 +110,9 @@ template <class KeyType, class DataType>
 LockFreeLinkedList<KeyType, DataType>::LockFreeLinkedList() {
    
    head = {false, NULL, DONTCARE};
+   prev = NULL;
+   pmark_curr_ptag = {false, NULL, DONTCARE};
+   cmark_next_ctag = {false, NULL, DONTCARE};
 
 }
 
@@ -118,10 +130,12 @@ bool LockFreeLinkedList<KeyType, DataType>::remove(KeyType key) {
 
 }
 
+
 template <class KeyType, class DataType>
 bool LockFreeLinkedList<KeyType, DataType>::search(KeyType key) {
   return find(key);
 }
+
 
 template <class KeyType, class DataType>
 bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
@@ -142,13 +156,16 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
 
 
   //Trying to use compare_exchange_weak
-  testCAS dest = {0};
-  testCAS expected = {0};
-  testCAS value = {10};
+  // testCAS dest = {0};
+  // testCAS expected = {0};
+  // testCAS value = {10};
 
 
-  std::atomic <testCAS *> hold;
-  hold = {0};
+  // std::atomic <testCAS *> hold;
+  // hold = {10};
+
+
+
   // hold.compare_exchange_weak(&expected, value,  std::memory_order_release,
   //                                       std::memory_order_relaxed);
 
@@ -156,35 +173,58 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
    try_again:
     prev = &head;
     pmark_curr_ptag.store(prev->load());
+
+
     while (true) {
 
-      NodeType <KeyType, DataType>* curr = pmark_curr_ptag.load().Next;
+
+      std::atomic <MarkPtrType <KeyType, DataType> > pmark_curr_ptag_temp = {pmark_curr_ptag.load()};
+
+      NodeType <KeyType, DataType> * curr = {pmark_curr_ptag.load().Next};
+
 
       if (curr == NULL) return false;
 
-      cmark_next_ctag.store(curr->mark_next_tag);
 
-      KeyType ckey = curr->Key;
+      MarkPtrType <KeyType, DataType> temp = curr->mark_next_tag;
+
+      /*Why cant I do something like
+      std::atomic <MarkPtrType <KeyType, DataType> > temp = curr->mark_next_tag;
+      or std::atomic <MarkPtrType <KeyType, DataType> > pika = {curr->mark_next_tag};
+      error: use of deleted function ‘std::atomic<_Tp>::atomic(const std::atomic<_Tp>&) [with _Tp = MarkPtrType<int, std::basic_string<char> >]’
+      for both cases*/
+
+      //For some reason I cant store an std::atomic <MarkPtrType <KeyType, DataType> >
+      cmark_next_ctag.store(temp);
+
+      KeyType ckey = {pmark_curr_ptag.load().Next->Key};
      
       MarkPtrType <KeyType, DataType> test = {false, pmark_curr_ptag.load().Next, 
                                   pmark_curr_ptag.load().Tag};
 
+      /*For some reason, I cant compare two atomic
+       structs directly. Im not sure why. It says type substitution failed
+       when I try to use an overloaded operator*/
       if( prev->load()!=test) goto try_again;
 
-      if(!pmark_curr_ptag.load().Mark){
+      /*if(!pmark_curr_ptag.load().Mark){
         if (ckey >= key) return ckey == key;
-           MarkPtrType <KeyType, DataType> temp = curr->mark_next_tag;
+          prev = &(pmark_curr_ptag.load().Next->mark_next_tag);
       }
       else{
+
+          temp = pmark_curr_ptag.load();
 
          // if(//__sync_bool_compare_and_swap(&test, test, test)){
          //    //Just compile;
          // }
         ;
 
-      }
+      }*/
+  
+      
+    } 
 
-    }
 
   
    return false;
