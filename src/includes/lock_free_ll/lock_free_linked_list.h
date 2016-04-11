@@ -126,17 +126,31 @@ bool LockFreeLinkedList<KeyType, DataType>::search(KeyType key) {
 template <class KeyType, class DataType>
 bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
 
-  //compare_and_swap does not work with structs
-  //testCAS item = {10};
-  //__sync_bool_compare_and_swap(&item, item, item);
+  // compare_and_swap does not work with structs
+  // testCAS dest = {0};
+  // testCAS expected = {0};
+  // testCAS value = {10};
+  // __sync_bool_compare_and_swap( (int *)&dest, *(int *)expected,
+  //      *(int *)value);
 
-  int dest = 0;
-  int expected = 0;
-  int value = 10;
+  // int dest = 0;
+  // int expected = 0;
+  // int value = 10;
 
-  __sync_bool_compare_and_swap(&dest, expected, value);
-  DLOG(INFO) << "Testing compare and swap " << dest ;
+  // __sync_bool_compare_and_swap(&dest, dest, dest);
+  // DLOG(INFO) << "Testing compare and swap " << dest ;
 
+
+  //Trying to use compare_exchange_weak
+  testCAS dest = {0};
+  testCAS expected = {0};
+  testCAS value = {10};
+
+
+  std::atomic <testCAS *> hold;
+  hold = {0};
+  // hold.compare_exchange_weak(&expected, value,  std::memory_order_release,
+  //                                       std::memory_order_relaxed);
 
 
    try_again:
