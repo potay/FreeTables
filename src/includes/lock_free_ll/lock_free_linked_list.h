@@ -147,10 +147,10 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
   // __sync_bool_compare_and_swap( (int *)&dest, *(int *)expected,
   //      *(int *)value);
 
+  //Works with ints though
   // int dest = 0;
   // int expected = 0;
   // int value = 10;
-
   // __sync_bool_compare_and_swap(&dest, dest, dest);
   // DLOG(INFO) << "Testing compare and swap " << dest ;
 
@@ -163,10 +163,7 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
 
   // std::atomic <testCAS *> hold;
   // hold = {10};
-
-
-
-  // hold.compare_exchange_weak(&expected, value,  std::memory_order_release,
+  // hold.compare_exchange_weak(expected, value,  std::memory_order_release,
   //                                       std::memory_order_relaxed);
 
 
@@ -176,8 +173,6 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
 
 
     while (true) {
-
-
 
 
       NodeType <KeyType, DataType> * curr = {pmark_curr_ptag.load().Next};
@@ -213,7 +208,7 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
       }
       else{
           
-          std::atomic <MarkPtrType <KeyType, DataType> > temp = {pmark_curr_ptag.load()};
+          //std::atomic <MarkPtrType <KeyType, DataType> > temp = {pmark_curr_ptag.load()};
           
           /*Why cant I convert {false, temp.Next, temp.Tag} to an atomic, I was
           able to do it using my constructor when I initialized head.
@@ -222,12 +217,33 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
           /*Why cant I access fields out of an atomic struct? 
           Only loading an storing is supported according to stack overflow.
           But why then was I able to do something like pmark_curr_ptag.load().Next*/
-          //<MarkPtrType <KeyType, DataType> > expected = {false, temp.Next, temp.Tag};
+          MarkPtrType <KeyType, DataType> expected = {false, pmark_curr_ptag.load().Next, pmark_curr_ptag.load().Tag};
+
+          MarkPtrType <KeyType, DataType> value    = {false, cmark_next_ctag.load().Next, cmark_next_ctag.load().Tag};
 
 
 
+          /*Prev cannot be an atomic type for compare_and_swap
+          if(__sync_bool_compare_and_swap(prev,expected, value)){
+              ;
+          }Only loads and stores are supported for compare and swap*/
+
+
+          if(prev->compare_exchange_weak(expected, value)){
+            ;//Delete node use heap ptrs
+             MarkPtrType <KeyType, DataType> temp1 = pmark_curr_ptag.load();
+             MarkPtrType <KeyType, DataType> temp2 = cmark_next_ctag.load();
+
+             MarkPtrType <KeyType, DataType> place_holder = {temp2.Mark, temp2.Next, temp1.Tag+1};
+             cmark_next_ctag.store(place_holder);
+          }
+          else{
+            goto try_again;
+          }
 
       }
+
+      pmark_curr_ptag.store(cmark_next_ctag.load());
   
       
     } 
