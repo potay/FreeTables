@@ -20,13 +20,13 @@ struct testCAS{
 
 
 
-template<typename T>
-struct node
-{
-    T data;
-    node* next;
-    node(const T& data) : data(data), next(nullptr) {}
-};
+// template<typename T>
+// struct node
+// {
+//     T data;
+//     node* next;
+//     node(const T& data) : data(data), next(nullptr) {}
+// };
 
 
 typedef int TagType;
@@ -118,8 +118,29 @@ LockFreeLinkedList<KeyType, DataType>::LockFreeLinkedList() {
 
 template <class KeyType, class DataType>
 bool LockFreeLinkedList<KeyType, DataType>::insert(KeyType key, DataType data) {
+  NodeType<KeyType, DataType> *node = new NodeType<KeyType, DataType>;
+  node->Key = key;
+  node->mark_next_tag = {nullptr};
+
+  while(true){
+    if (find(key)) {
+      delete node;
+      return false;
+    }
+    MarkPtrType <KeyType, DataType> temp = pmark_curr_ptag.load();
+    MarkPtrType <KeyType, DataType> storeVal = {false, temp.Next, 0};
+    node->mark_next_tag.store(storeVal);
+
+    MarkPtrType <KeyType, DataType> expected = {false, temp.Next, temp.Tag};
+    MarkPtrType <KeyType, DataType> value = {false, node, temp.Tag+1};
+
+    if (prev->compare_exchange_weak(expected, value)) {
+        //Delete Node
+        return true;
+    }
+  }
   
-  return false;
+
 }
 
 
