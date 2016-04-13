@@ -109,10 +109,10 @@ class LockFreeLinkedList {
 template <class KeyType, class DataType>
 LockFreeLinkedList<KeyType, DataType>::LockFreeLinkedList() {
    
-   head = {false, NULL, DONTCARE};
+   head = {false, NULL, 10};
    prev = NULL;
-   pmark_curr_ptag = {false, NULL, DONTCARE};
-   cmark_next_ctag = {false, NULL, DONTCARE};
+   pmark_curr_ptag = {false, NULL, 4};
+   cmark_next_ctag = {false, NULL, 5};
 
 }
 
@@ -192,6 +192,7 @@ bool LockFreeLinkedList<KeyType, DataType>::remove(KeyType key) {
     next_temp = cmark_next_ctag.load();
     expected = {false, curr_temp.Next, curr_temp.Tag};
     value = {false, next_temp.Next, curr_temp.Tag+1};
+
 
     if (prev->compare_exchange_weak(expected, value)) {
       // DeleteNode(curr_temp.next);
@@ -341,12 +342,12 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
 template <class KeyType, class DataType>
 void LockFreeLinkedList<KeyType, DataType>::print() {
 
-  void(0);
-   /*DLOG(INFO) << "---------------------";
+  //void(0);
+   DLOG(INFO) << "---------------------";
    DLOG(INFO) << "Head             " << (head.load()).Mark  << ":" << (head.load()).Next << ":" << (head.load()).Tag ;
    DLOG(INFO) << "pmark_curr_ptag  " << (pmark_curr_ptag.load()).Mark  << ":" << (pmark_curr_ptag.load()).Next << ":" << (pmark_curr_ptag.load()).Tag ;
    DLOG(INFO) << "cmark_next_ctag  " << (cmark_next_ctag.load()).Mark  << ":" << (cmark_next_ctag.load()).Next << ":" << (cmark_next_ctag.load()).Tag ;
-   DLOG(INFO) << "---------------------";*/
+   DLOG(INFO) << "---------------------";
 
 }
 
