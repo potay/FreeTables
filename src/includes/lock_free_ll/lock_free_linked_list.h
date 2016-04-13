@@ -125,8 +125,13 @@ bool LockFreeLinkedList<KeyType, DataType>::insert(KeyType key, DataType data) {
   node->mark_next_tag = {nullptr};
 
   while(true){
-    DLOG(INFO) << "Checking if key has been inserted \n";
+    //DLOG(INFO) << "Checking if key has been inserted \n";
+    //DLOG(INFO) << "Head             " << (head.load()).Mark  << ":" << (head.load()).Next << ":" << (head.load()).Tag ;
+
+   
+
     if (find(key)) {
+      DLOG(INFO) << "Should not be called \n";
       delete node;
       return false;
     }
@@ -137,10 +142,23 @@ bool LockFreeLinkedList<KeyType, DataType>::insert(KeyType key, DataType data) {
     MarkPtrType <KeyType, DataType> expected = {false, temp.Next, temp.Tag};
     MarkPtrType <KeyType, DataType> value = {false, node, temp.Tag+1};
 
-    if (prev->compare_exchange_weak(expected, value)) {
+    DLOG(INFO) << "What is prev?";
+    DLOG(INFO) << "Prev  " << (prev->load()).Mark  << ":" << (prev->load()).Next << ":" << (prev->load()).Tag ;
+
+    DLOG(INFO) << "Prev Mark:"  << (prev->load()).Mark;
+    DLOG(INFO) << "Prev Next:"  << (prev->load()).Next;
+    DLOG(INFO) << "Prev Tag:"  << (prev->load()).Tag;
+
+    if (prev->compare_exchange_weak(expected, value) ) {
         //Delete Node
+        DLOG(INFO)  << "Did I enter?";
         return true;
     }
+
+
+
+
+    DLOG(INFO) << "So I failed?";
   }
   
 
@@ -237,11 +255,14 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
 
     while (true) {
 
-
       NodeType <KeyType, DataType> * curr = {pmark_curr_ptag.load().Next};
 
 
-      if (curr == NULL) return false;
+      if (curr == NULL){
+        return false;
+      }
+         
+      //DLOG(INFO) << "Should not be getting here ";
 
 
       MarkPtrType <KeyType, DataType> temp = curr->mark_next_tag;
@@ -320,7 +341,7 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
 template <class KeyType, class DataType>
 void LockFreeLinkedList<KeyType, DataType>::print() {
 
-  (void)0;
+  void(0);
    /*DLOG(INFO) << "---------------------";
    DLOG(INFO) << "Head             " << (head.load()).Mark  << ":" << (head.load()).Next << ":" << (head.load()).Tag ;
    DLOG(INFO) << "pmark_curr_ptag  " << (pmark_curr_ptag.load()).Mark  << ":" << (pmark_curr_ptag.load()).Next << ":" << (pmark_curr_ptag.load()).Tag ;
