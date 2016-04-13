@@ -139,21 +139,22 @@ bool LockFreeLinkedList<KeyType, DataType>::insert(KeyType key, DataType data) {
     MarkPtrType <KeyType, DataType> storeVal = {false, temp.Next, 0};
     node->mark_next_tag.store(storeVal);
 
-    MarkPtrType <KeyType, DataType> expected = {false, temp.Next, temp.Tag};
+    MarkPtrType <KeyType, DataType> expected = {false, NULL, 10};
     MarkPtrType <KeyType, DataType> value = {false, node, temp.Tag+1};
 
     DLOG(INFO) << "What is prev?";
     DLOG(INFO) << "Prev  " << (prev->load()).Mark  << ":" << (prev->load()).Next << ":" << (prev->load()).Tag ;
 
-    DLOG(INFO) << "Prev Mark:"  << (prev->load()).Mark;
-    DLOG(INFO) << "Prev Next:"  << (prev->load()).Next;
-    DLOG(INFO) << "Prev Tag:"  << (prev->load()).Tag;
+    DLOG(INFO) << "pmark_curr_ptag  " << (pmark_curr_ptag.load()).Mark  << ":" << (pmark_curr_ptag.load()).Next << ":" << (pmark_curr_ptag.load()).Tag ;
+    DLOG(INFO) << "expected  " << expected.Mark  << ":" << expected.Next << ":" << expected.Tag ;
 
-    if (prev->compare_exchange_weak(expected, value) ) {
+    if (prev->compare_exchange_strong(expected, value,  std::memory_order_seq_cst) ) {
         //Delete Node
         DLOG(INFO)  << "Did I enter?";
         return true;
     }
+
+    DLOG(INFO) << "Im going to test a compare and swap";
 
 
 
@@ -305,6 +306,7 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
           MarkPtrType <KeyType, DataType> expected = {false, pmark_curr_ptag.load().Next, pmark_curr_ptag.load().Tag};
 
           MarkPtrType <KeyType, DataType> value    = {false, cmark_next_ctag.load().Next, cmark_next_ctag.load().Tag};
+
 
 
 
