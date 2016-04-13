@@ -118,6 +118,8 @@ LockFreeLinkedList<KeyType, DataType>::LockFreeLinkedList() {
 
 template <class KeyType, class DataType>
 bool LockFreeLinkedList<KeyType, DataType>::insert(KeyType key, DataType data) {
+ 
+  //DLOG(INFO);
   NodeType<KeyType, DataType> *node = new NodeType<KeyType, DataType>;
   node->Key = key;
   node->mark_next_tag = {nullptr};
@@ -146,8 +148,43 @@ bool LockFreeLinkedList<KeyType, DataType>::insert(KeyType key, DataType data) {
 
 template <class KeyType, class DataType>
 bool LockFreeLinkedList<KeyType, DataType>::remove(KeyType key) {
+
+  std::atomic <MarkPtrType <KeyType, DataType> > temp = {pmark_curr_ptag.load()};
   
-  return false;
+  while(true){
+    if (!find(key)) {
+      return false;
+    }
+    MarkPtrType <KeyType, DataType> curr_temp = pmark_curr_ptag.load();
+    MarkPtrType <KeyType, DataType> next_temp = cmark_next_ctag.load();
+    MarkPtrType <KeyType, DataType> expected  = {false, next_temp.Next, next_temp.Tag};
+    MarkPtrType <KeyType, DataType> value     = {true, next_temp.Next, next_temp.Tag+1};
+
+    MarkPtrType <KeyType, DataType> curr_temp_next_blk = (curr_temp.Next)->mark_next_tag;
+
+
+    std::atomic <MarkPtrType <KeyType, DataType> > curr_temp_next_blk_atomic;
+    curr_temp_next_blk_atomic.store(curr_temp_next_blk);//{(curr_temp.Next)->mark_next_tag};
+    if(!curr_temp_next_blk_atomic.compare_exchange_weak(expected, value)){
+      continue;
+    }
+
+    curr_temp = pmark_curr_ptag.load();
+    next_temp = cmark_next_ctag.load();
+    expected = {false, curr_temp.Next, curr_temp.Tag};
+    value = {false, next_temp.Next, curr_temp.Tag+1};
+
+    if (prev->compare_exchange_weak(expected, value)) {
+      // DeleteNode(curr_temp.next);
+      (void)0;
+      //print();
+    } else {
+      find(key);
+    }
+
+    return true;
+
+  }
 
 }
 
