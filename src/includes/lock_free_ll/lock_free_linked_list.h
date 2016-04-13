@@ -98,6 +98,8 @@ class LockFreeLinkedList {
     bool find(KeyType key);
 
     void print();
+
+    __attribute__((aligned(16)));
 };
 
 
@@ -109,10 +111,10 @@ class LockFreeLinkedList {
 template <class KeyType, class DataType>
 LockFreeLinkedList<KeyType, DataType>::LockFreeLinkedList() {
    
-   head = {false, NULL, 10};
+   head = {false, NULL, (TagType)10};
    prev = NULL;
-   pmark_curr_ptag = {false, NULL, 4};
-   cmark_next_ctag = {false, NULL, 5};
+   pmark_curr_ptag = {false, NULL, (TagType)4};
+   cmark_next_ctag = {false, NULL, (TagType)5};
 
 }
 
@@ -139,8 +141,16 @@ bool LockFreeLinkedList<KeyType, DataType>::insert(KeyType key, DataType data) {
     MarkPtrType <KeyType, DataType> storeVal = {false, temp.Next, 0};
     node->mark_next_tag.store(storeVal);
 
-    MarkPtrType <KeyType, DataType> expected = {false, NULL, 10};
+    MarkPtrType <KeyType, DataType> expected = {false, NULL, temp.Tag};
     MarkPtrType <KeyType, DataType> value = {false, node, temp.Tag+1};
+
+    if(temp.Tag == (TagType)10){
+      DLOG(INFO) << "This is what I expect";
+      if(temp.Tag == (prev->load()).Tag){
+         DLOG(INFO) << "This is also what I expect";
+      }
+    }
+
 
     DLOG(INFO) << "What is prev?";
     DLOG(INFO) << "Prev  " << (prev->load()).Mark  << ":" << (prev->load()).Next << ":" << (prev->load()).Tag ;
@@ -148,7 +158,7 @@ bool LockFreeLinkedList<KeyType, DataType>::insert(KeyType key, DataType data) {
     DLOG(INFO) << "pmark_curr_ptag  " << (pmark_curr_ptag.load()).Mark  << ":" << (pmark_curr_ptag.load()).Next << ":" << (pmark_curr_ptag.load()).Tag ;
     DLOG(INFO) << "expected  " << expected.Mark  << ":" << expected.Next << ":" << expected.Tag ;
 
-    if (prev->compare_exchange_strong(expected, value,  std::memory_order_seq_cst) ) {
+    if (prev->compare_exchange_strong(expected, value) ) {
         //Delete Node
         DLOG(INFO)  << "Did I enter?";
         return true;
