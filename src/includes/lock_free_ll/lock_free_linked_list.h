@@ -119,12 +119,13 @@ LockFreeLinkedList<KeyType, DataType>::LockFreeLinkedList() {
 template <class KeyType, class DataType>
 bool LockFreeLinkedList<KeyType, DataType>::insert(KeyType key, DataType data) {
  
-  //DLOG(INFO);
+  DLOG(INFO) << "Entering insert \n";
   NodeType<KeyType, DataType> *node = new NodeType<KeyType, DataType>;
   node->Key = key;
   node->mark_next_tag = {nullptr};
 
   while(true){
+    DLOG(INFO) << "Checking if key has been inserted \n";
     if (find(key)) {
       delete node;
       return false;
@@ -182,6 +183,8 @@ bool LockFreeLinkedList<KeyType, DataType>::remove(KeyType key) {
       find(key);
     }
 
+
+
     return true;
 
   }
@@ -224,7 +227,9 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
   // hold.compare_exchange_weak(expected, value,  std::memory_order_release,
   //                                       std::memory_order_relaxed);
 
+  
 
+   print();
    try_again:
     prev = &head;
     pmark_curr_ptag.store(prev->load());
@@ -311,4 +316,18 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
    return false;
 
 }
+
+template <class KeyType, class DataType>
+void LockFreeLinkedList<KeyType, DataType>::print() {
+
+  (void)0;
+   /*DLOG(INFO) << "---------------------";
+   DLOG(INFO) << "Head             " << (head.load()).Mark  << ":" << (head.load()).Next << ":" << (head.load()).Tag ;
+   DLOG(INFO) << "pmark_curr_ptag  " << (pmark_curr_ptag.load()).Mark  << ":" << (pmark_curr_ptag.load()).Next << ":" << (pmark_curr_ptag.load()).Tag ;
+   DLOG(INFO) << "cmark_next_ctag  " << (cmark_next_ctag.load()).Mark  << ":" << (cmark_next_ctag.load()).Next << ":" << (cmark_next_ctag.load()).Tag ;
+   DLOG(INFO) << "---------------------";*/
+
+}
+
+
 
