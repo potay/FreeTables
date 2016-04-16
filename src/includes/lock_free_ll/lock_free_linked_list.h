@@ -80,12 +80,25 @@ bool LockFreeLinkedList<KeyType, DataType>::insert(KeyType key, DataType data) {
 
     //Make node point to current
     //mark_ptr_type is a 128 bit value (64 bits mark_next, 64 bits tag)
-    MarkPtrType node_mark_next = node->mark_ptr_type.load();
-    //This now contains a Markptr type. You can access the
-    //pmark_curr field bu using the temp_pmark_curr.
+    MarkPtrType node_mark_next_ptr = node->mark_ptr_type.load();
     MarkPtrType temp_pmark_curr_ptag = pmark_curr_ptag.load();
     uintptr_t pmark_curr = temp_pmark_curr_ptag.mark_next;
     uintptr_t clear_curr = pmark_curr& (~(uintptr_t)0);
+    uintptr_t clear_node = (uintptr_t)node&(~(uintptr_t)0);
+
+    //Prepare and store the pointer
+    node_mark_next_ptr.mark_next = clear_curr;
+    node_mark_next_ptr.tag = (TagType)0;
+    node->mark_ptr_type.store(node_mark_next_ptr);
+
+    MarkPtrType expected = {clear_curr, temp_pmark_curr_ptag.tag};
+    MarkPtrType value = {clear_node, temp_pmark_curr_ptag.tag+1};
+
+    //Perform a compare_and_swap
+    if(prev->compare_exchange_weak(expected,value)){
+      return true;
+    }
+
     
 
   }
@@ -99,13 +112,25 @@ bool LockFreeLinkedList<KeyType, DataType>::remove(KeyType key) {
 
 template <class KeyType, class DataType>
 bool LockFreeLinkedList<KeyType, DataType>::search(KeyType key) {
+
+
   return find(key);
 }
 
 
 template <class KeyType, class DataType>
 bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
-  return false;
+  try_again:
+    prev = &head;
+    pmark_curr_ptag.store(prev->load());
+    while(true){
+      MarkPtrType temp_pmark_curr_ptag = pmark_curr_ptag.load();
+      uintptr_t curr = temp_pmark_curr_ptag.mark_next;
+      if(curr == NULL){
+        return false;
+      }
+    }
+    return true;
 }
 
 
