@@ -121,15 +121,81 @@ bool LockFreeLinkedList<KeyType, DataType>::search(KeyType key) {
 template <class KeyType, class DataType>
 bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
   try_again:
+
+    //prev = head
     prev = &head;
+
+    //<pmark, curr> = *prev;
     pmark_curr_ptag.store(prev->load());
+
     while(true){
-      MarkPtrType temp_pmark_curr_ptag = pmark_curr_ptag.load();
-      uintptr_t curr = temp_pmark_curr_ptag.mark_next;
+
+      //Get curr
+      MarkPtrType pmark_curr_ptag_temp = pmark_curr_ptag.load();
+      uintptr_t curr = pmark_curr_ptag_temp.mark_next;
+      uintptr_t ptag = pmark_curr_ptag_temp.tag;
+
+      //if(curr == NULL) return false;
       if(curr == NULL){
         return false;
       }
+
+      //<cmark, next> = cur-><mark, next>
+      uintptr_t clear_curr = curr& (~(uintptr_t)0);
+      NodeType <KeyType, DataType> *clear_curr_node = (NodeType <KeyType, DataType> *)clear_curr;
+      MarkPtrType curr_mark_next_tag = clear_curr_node->mark_ptr_type;
+      uintptr_t curr_mark_next = curr_mark_next_tag.mark_next;
+      uintptr_t curr_tag = curr_mark_next_tag.tag;
+      uintptr_t clear_curr_mark_next = curr_mark_next& (~(uintptr_t)0);
+
+      MarkPtrType cmark_next_ctag_temp = cmark_next_ctag.load();
+      cmark_next_ctag_temp.mark_next = curr_mark_next;
+      cmark_next_ctag_temp.tag = curr_tag;
+      cmark_next_ctag.store(cmark_next_ctag_temp);
+    
+      //ckey = curr->key
+      KeyType ckey = clear_curr_node->key;
+
+      //if(*prev == <0, curr>) goto try_again;
+      MarkPtrType prev_mark_next_tag = (*prev).load();
+      uintptr_t prev_mark_next = prev_mark_next_tag.mark_next;
+      uintptr_t prev_tag = prev_mark_next_tag.tag;
+      if((prev_mark_next != clear_curr)  || (prev_tag!=ptag)){
+         goto try_again;
+      }
+
+      uintptr_t cmark_next = pmark_curr_ptag_temp.mark_next;
+      uintptr_t ctag = pmark_curr_ptag_temp.tag;
+      uintptr_t cmark = cmark_next&(uintptr_t)1;
+
+      if(!cmark){
+        if(ckey >= key){
+          return ckey == key;
+        }
+        //prev = &(curr-><mark,next>);
+        prev_mark_next_tag.mark_next = curr_mark_next;
+        prev_mark_next_tag.tag = curr_tag;
+        (*prev).store(prev_mark_next_tag);
+      }
+
+      else{
+        MarkPtrType expected = {clear_curr, ptag};
+        MarkPtrType value = {clear_curr_mark_next, ptag+1};
+        if(prev->compare_exchange_weak(expected,value)){
+          //Delete node
+        }
+        else{
+          goto try_again;
+        }
+      }
+
+      //<pmark, curr> = <cmark, next>
+      pmark_curr_ptag_temp.mark_next = cmark_next;
+      pmark_curr_ptag_temp.tag = ctag;
+
+      //return true;
     }
+
     return true;
 }
 
