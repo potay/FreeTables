@@ -107,7 +107,53 @@ bool LockFreeLinkedList<KeyType, DataType>::insert(KeyType key, DataType data) {
 
 template <class KeyType, class DataType>
 bool LockFreeLinkedList<KeyType, DataType>::remove(KeyType key) {
-  return false;
+  
+
+  while(true){
+    if(!find(key)){
+      return false;
+    }
+
+    MarkPtrType pmark_curr_ptag_temp = pmark_curr_ptag.load();
+    uintptr_t curr = pmark_curr_ptag_temp.mark_next;
+    uintptr_t ptag = pmark_curr_ptag_temp.tag;
+
+    uintptr_t clear_curr = curr& (~(uintptr_t)0);
+    NodeType <KeyType, DataType> *clear_curr_node = (NodeType <KeyType, DataType> *)clear_curr;
+    MarkPtrType curr_mark_next_tag = clear_curr_node->mark_ptr_type;
+    uintptr_t curr_mark_next = curr_mark_next_tag.mark_next;
+    uintptr_t curr_tag = curr_mark_next_tag.tag;
+
+    std::atomic <MarkPtrType> test = {curr_mark_next_tag};
+
+    MarkPtrType cmark_next_ctag_temp = cmark_next_ctag.load();
+    uintptr_t cmark_next = cmark_next_ctag_temp.mark_next;
+    uintptr_t clear_next = cmark_next& (~(uintptr_t)0);
+    uintptr_t set_next = cmark_next|(uintptr_t)1;
+    uintptr_t ctag = cmark_next_ctag_temp.tag;
+
+    MarkPtrType expected = {clear_next, ctag};
+    MarkPtrType value = {set_next, ctag+1};
+
+    if(!test.compare_exchange_weak(expected,value)){
+      continue;
+    }
+
+   expected.mark_next = clear_curr;
+   expected.tag = ptag;
+   value.mark_next = clear_next;
+   value.tag = ptag +1;
+
+   if(prev->compare_exchange_weak(expected,value)){
+      //delete_node
+   }
+   else{
+    find(key);
+   }
+   return true;
+  }//while ends here
+
+
 }
 
 template <class KeyType, class DataType>
@@ -164,8 +210,8 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
          goto try_again;
       }
 
-      uintptr_t cmark_next = pmark_curr_ptag_temp.mark_next;
-      uintptr_t ctag = pmark_curr_ptag_temp.tag;
+      uintptr_t cmark_next = cmark_next_ctag_temp.mark_next;
+      uintptr_t ctag = cmark_next_ctag_temp.tag;
       uintptr_t cmark = cmark_next&(uintptr_t)1;
 
       if(!cmark){
