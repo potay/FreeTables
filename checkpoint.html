@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Checkpoint :: FreeTables - A lock-free hash table</title>
+    <!--Import Google Icon Font-->
+    <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!--Import materialize.css-->
+    <link type="text/css" rel="stylesheet" href="css/materialize.min.css"  media="screen,projection"/>
+
+    <!--Let browser know website is optimized for mobile-->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  </head>
+
+  <body>
+
+    <div class="row light-blue darken-3 white-text">
+      <div class="col s12">
+        <div class="container">
+          <a href="index.html"><h1 class="center-align white-text">FreeTables</h1></a>
+          <p class="center-align">By <a href="http://paulchun.com" target="_blank">Paul Chun</a> & Mark Fernandez</p>
+          <br>
+        </div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col s12">
+        <div class="container">
+
+          <div class="section">
+            <h4>What's our current progress?</h4>
+            <p>We decided to develop the project in C++, as it allowed us to create more robust data structures in order to keep the code tidy and readable, whilst allowing the implementation to be efficient and clean. We created the basic foundation for the code base, including a customizable testing framework in order to measure the performance of our project against other simpler and more naive implementations. We also implemented a simple global lock linked-list data structure to test our lock-free linked list against.</p>
+
+            <p>After completing the basic foundation in the first half of the first week, we moved on to implement the lock-free implementation of our linked-list, which would allow us to implement a lock-free hash table. We are currently trying to implement the lock-free implementation of our linked-list but have unfortunately run into some issues with our atomic structure, which allows us to do atomic compare and swaps. We have spent most of our time trying to fix this issue.</p>
+
+            <p>The main issue is suspected to be due to the size of the structure, which is 128 bits in size and needs to be aligned on a double word boundary. This was determined after removing the tag (which is necessary to prevent the ABA problem in lock free data structures), as it caused the program to work sequentially, but not concurrently (due to the ABA problem).</p>
+
+            <p>As such, this has caused us to fall behind schedule. We will be continuing to work hard on this and have thus adjusted our goals and deliverables to create a clear and practical roadmap for us for the rest of this project.</p>
+
+            <p>We plan to present our performance findings based on our test harness during the final competition demo and presentation and compare this performance to other standard data structure implementations. These findings will probably be illustrated in a form of a graph and other data visualizations.</p>
+          </div>
+          <div class="divider"></div>
+
+          <div class="section">
+            <h4>What are our revised goals and deliverables?</h4>
+            <b>What do we plan to achieve?</b>
+            <ol>
+              <li>Implement a correct, efficient CAS-based lock-free list that supports insertion and deletion</li>
+              <li>Implement a  correct, efficient lock-free working hash table that supports insertion, deletion and lookup based on the lock-free linked list.</li>
+              <li>Test and measure its performance versus a hash table implemented using  single grained and fine-grained locks varying thread counts.</li>
+            </ol>
+            <b>What are our reach goals?</b>
+            <ol>
+              <li>Parallelize a binary decision diagram package on the Phi.  Only if project goes spectacularly well though. </li>
+            </ol>
+          </div>
+          <div class="divider"></div>
+
+          <div class="section">
+            <h4>What are we tentatively going to present during demo day?</h4>
+            <p>We plan to show a series of graphs of the time taken to complete a workload versus the number of threads used for a lock-free, global locked and fine-grained implementation.</p>
+
+            <p>The workloads  that we plan on using are
+              <ol>
+                <li>5% Insert, 5% Delete, 90% Search</li>
+                <li>10% Insert, 10% Delete, 80% Search</li>
+                <li>⅓ Insert, ⅓ Delete, ⅓ Search</li>
+              </ol>
+            </p>
+          </div>
+          <div class="divider"></div>
+
+          <div class="section">
+            <h4>What has been done so far?</h4>
+            <table class="bordered responsive-table">
+              <thead>
+                <tr>
+                  <th>Week</th>
+                  <th>Planned Goals</th>
+                  <th>Actual Achievements</th>
+                </tr>
+              <thead>
+              <tbody>
+                <tr>
+                  <td rowspan="4">Week 1</td>
+                  <td>Implement a linked list with global lock.</td>
+                  <td>Implemented a sequential version of a linked list using locks that uses search, insert and delete.</td>
+                </tr>
+                <tr>
+                  <td>Implement a test harness to check correctness of linked list.</td>
+                  <td>Developed a test harness to test the sequential version of the list with search, insert and remove.</td>
+                </tr>
+                <tr>
+                  <td>Implement linked list with fine-grained lock.</td>
+                  <td>Sequential version working.</td>
+                </tr>
+                <tr>
+                  <td>Implement a basic lock-free linked list.</td>
+                  <td></td>
+                </tr>
+
+                <tr>
+                  <td rowspan="3">Week 2 (Checkpoint)</td>
+                  <td>Implement a hash-table with global locks and fine-grained locking.</td>
+                  <td>Working on lock-free linked list implementation.</td>
+                </tr>
+                <tr>
+                  <td>Test it and so update the test harness for a correct hash table.</td>
+                  <td></td>
+                </tr>
+                <tr>
+                  <td>Implement a lock free hash-table.</td>
+                  <td></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="section">
+            <h4>What is the plan for the final half?</h4>
+            <table class="bordered responsive-table">
+              <thead>
+                <tr>
+                  <th>Week</th>
+                  <th>Planned Goals</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td rowspan="2">Week 3.5</td>
+                  <td>Get a lock-free linked list that supports insert, remove and search working sequentially.</td>
+                </tr>
+                <tr>
+                  <td>Parallelize the code by modifying the test harness.</td>
+                </tr>
+
+                <tr>
+                  <td rowspan="2">Week 4.0</td>
+                  <td>Have a working version of the hash table. Once we have a version of the hash table working, then we can have something substantial. 
+                </tr>
+                <tr>
+                  <td>Use a randomized sequence of inserts and deletes. Use the workload distribution of inserts, deletes and remove.</td>
+                </tr>
+
+                <tr>
+                  <td rowspan="2">Week 4.5 (Deadline)</td>
+                  <td>Implement a hash-table with fine-grained locks.</td>
+                </tr>
+                <tr>
+                  <td>Test for correctness</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!--Import jQuery before materialize.js-->
+    <script type="text/javascript" src="js/jquery-2.2.2.min.js"></script>
+    <script type="text/javascript" src="js/materialize.min.js"></script>
+  </body>
+</html>
