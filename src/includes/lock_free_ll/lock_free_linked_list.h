@@ -33,26 +33,19 @@ class LockFreeLinkedListAtomicBlock {
   public:
     void store(const LockFreeLinkedListBlock<KeyType, DataType>& b) {
 
-      DLOG(INFO) << "Entering code to store LockFreeLinkedListBlock ";
       LockFreeLinkedListInternalBlock new_block = block_to_internal(b);
-      DLOG(INFO) << "Getting a new block passed....";
-      // bool hooha = std::is_trivially_copyable<LockFreeLinkedListInternalBlock>::value;
       block.store(new_block);
 
-      DLOG(INFO) << "Storing a new block passed....";
-      // block = new_block;
     }
 
     void store(bool mark, LockFreeLinkedListNode<KeyType, DataType> *next, TagType tag) {
 
-      DLOG(INFO) << "Entering code to store LockFreeLinkedListNode";
       LockFreeLinkedListBlock<KeyType, DataType> b = {mark, next, tag};
       store(b);
     }
 
     LockFreeLinkedListBlock<KeyType, DataType> load() {
       LockFreeLinkedListInternalBlock b = block.load();
-      // LockFreeLinkedListInternalBlock b = block;
       return internal_to_block(b);
     }
 
@@ -60,12 +53,6 @@ class LockFreeLinkedListAtomicBlock {
       LockFreeLinkedListInternalBlock new_expected = block_to_internal(expected);
       LockFreeLinkedListInternalBlock new_value = block_to_internal(value);
       return block.compare_exchange_weak(new_expected, new_value);
-      // if (block.pointer == new_expected.pointer && block.tag == new_expected.tag) {
-      //   block = new_value;
-      //   return true;
-      // } else {
-      //   return false;
-      // }
     }
 
     LockFreeLinkedListAtomicBlock() : block({(uintptr_t)0, (TagType)0}) {};
@@ -76,26 +63,16 @@ class LockFreeLinkedListAtomicBlock {
       TagType tag; 
     }__attribute__ ((aligned (16)));
     std::atomic<LockFreeLinkedListInternalBlock> block;
-    // LockFreeLinkedListInternalBlock block;
 
     inline LockFreeLinkedListInternalBlock block_to_internal(const LockFreeLinkedListBlock<KeyType, DataType>& b) {
-      DLOG(INFO) << "Entering block_to_internal";
-      DLOG(INFO) << "Mark :" << b.mark << " Next :" << b.next << " Tag :" << b.tag ;
-      LockFreeLinkedListInternalBlock new_block = {(b.mark ? ((uintptr_t)(b.next) | (uintptr_t)1) : ((uintptr_t)(b.next) & (~(uintptr_t)0))), b.tag};
-      //This new block will not be atomic
-      //LockFreeLinkedListBlock<KeyType, DataType> temp = internal_to_block(new_block);
-      // if(temp == NULL){
-      //     DLOG(INFO) << "You are returning a NULL block";
-      // }
-      // else{
-      //     DLOG(INFO) << "Mark :" << temp.mark << " Next :" << temp.next << " Tag :" << temp.tag ;
-      // }
-
+ 
+      LockFreeLinkedListInternalBlock new_block = {(b.mark ? ((uintptr_t)(b.next) | (uintptr_t)1) : ((uintptr_t)(b.next) & (~(uintptr_t)1))), b.tag};
+ 
       return new_block;
     }
     inline LockFreeLinkedListBlock<KeyType, DataType> internal_to_block(const LockFreeLinkedListInternalBlock& b) {
       bool mark = ((b.pointer & (uintptr_t)1) == (uintptr_t)1) ? true : false;
-      LockFreeLinkedListNode<KeyType, DataType> *next = (LockFreeLinkedListNode<KeyType, DataType> *)(b.pointer & (~(uintptr_t)0));
+      LockFreeLinkedListNode<KeyType, DataType> *next = (LockFreeLinkedListNode<KeyType, DataType> *)(b.pointer & (~(uintptr_t)1));
       TagType tag = b.tag;
       LockFreeLinkedListBlock<KeyType, DataType> new_block = {mark, next, (TagType)tag};
       return new_block;
@@ -109,7 +86,7 @@ class LockFreeLinkedListNode {
     DataType data;
     LockFreeLinkedListAtomicBlock<KeyType, DataType> mark_next_tag;
     LockFreeLinkedListNode(KeyType k, DataType d) { key = k; data = d; }
-};
+}__attribute__ ((aligned (16)));;
 
 
 /* Note that KeyType must have an implementation for comparison operators */
@@ -207,17 +184,13 @@ bool LockFreeLinkedList<KeyType, DataType>::search(KeyType key) {
 template <class KeyType, class DataType>
 bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
 
-DLOG(INFO) << "Entering find.";
 try_again:
-  DLOG(INFO) << "Entering try_again...";
+
   prev = &head;
-  DLOG(INFO) << "Dereference prev...";
   prev->load();
-  DLOG(INFO) << "Loading prev passed....";
   pmark_cur_ptag.store(prev->load());
-  DLOG(INFO) << "Storing prev passed";
   while (true) {
-    DLOG(INFO) << "Start of loop...";
+
     if (pmark_cur_ptag.load().next == NULL) return false;
 
     LockFreeLinkedListBlock<KeyType, DataType> temp = pmark_cur_ptag.load();
