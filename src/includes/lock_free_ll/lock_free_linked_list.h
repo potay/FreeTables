@@ -2,6 +2,10 @@
 #include <atomic>
 
 
+struct testCAS{
+   int testCASVal;
+};
+
 typedef uintptr_t TagType;
 
 struct MarkPtrType {
@@ -16,6 +20,7 @@ struct NodeType {
   DataType data;
   std::atomic <MarkPtrType> mark_ptr_type;
 }__attribute__ ((aligned (16)));
+
 
 
 template <class KeyType, class DataType>
@@ -53,7 +58,7 @@ class LockFreeLinkedList {
 template <class KeyType, class DataType>
 LockFreeLinkedList<KeyType, DataType>::LockFreeLinkedList() {
    
-   head = {(uintptr_t)0, (TagType)10};
+   head = {(uintptr_t)0, (TagType)0};
    prev = NULL;
    pmark_curr_ptag = {(uintptr_t)0, (TagType)0};
    cmark_next_ctag = {(uintptr_t)0, (TagType)0};
@@ -63,13 +68,37 @@ LockFreeLinkedList<KeyType, DataType>::LockFreeLinkedList() {
 
 template <class KeyType, class DataType>
 bool LockFreeLinkedList<KeyType, DataType>::insert(KeyType key, DataType data) {
+
+
+
+    //Code to make atomic compare and swap work with structs
+    // void *dest_op = &dest;
+    // void *expected_op = &dest;
+    // void *value_op = &value;
+    // // __sync_bool_compare_and_swap((long long*) dest, *(long long*)expected_op, *(long long*)value_op);
+    //  if(__sync_bool_compare_and_swap(&dest_op, expected_op, value_op)){
+    //     DLOG(INFO) << "Success";
+    //  }
+    //  else{
+    //     DLOG(INFO)  << "failure";
+    //  };
+    //   testCAS *check = (testCAS *)dest_op;
+    // DLOG(INFO) << "Moment of truth" << check->testCASVal;
+
+   //Trying to write the code to perform 16 bit compare and swap.
+   // __int128 dest_int = 0;
+   // __int128 expected_int = 0;
+   // __int128 value_int = 10;
+
+   //__sync_bool_compare_and_swap(&dest_int, expected_int, value_int);
+   //DLOG(INFO) << "Moment of truth" << dest_int;
   
   //Initialze element 
   NodeType<KeyType, DataType> *node = new NodeType<KeyType, DataType>;
   node->key = key;
   node->data = data;
-  MarkPtrType temp_mark_ptr = {(uintptr_t)0, (TagType)0};
-  node->mark_ptr_type.store(temp_mark_ptr); 
+  MarkPtrType mark_ptr_temp = {(uintptr_t)0, (TagType)0};
+  node->mark_ptr_type.store(mark_ptr_temp); 
 
   while(1){
     if (find(key)) {
@@ -77,12 +106,14 @@ bool LockFreeLinkedList<KeyType, DataType>::insert(KeyType key, DataType data) {
       return false;
     }
 
+    DLOG(INFO) << "Printing in insert after find ";
+    print();
+  
 
-    //Make node point to current
-    //mark_ptr_type is a 128 bit value (64 bits mark_next, 64 bits tag)
+    //node-><mark, next> = <0,curr>
     MarkPtrType node_mark_next_ptr = node->mark_ptr_type.load();
-    MarkPtrType temp_pmark_curr_ptag = pmark_curr_ptag.load();
-    uintptr_t pmark_curr = temp_pmark_curr_ptag.mark_next;
+    MarkPtrType pmark_curr_ptag_temp = pmark_curr_ptag.load();
+    uintptr_t pmark_curr = pmark_curr_ptag_temp.mark_next;
     uintptr_t clear_curr = pmark_curr& (~(uintptr_t)0);
     uintptr_t clear_node = (uintptr_t)node&(~(uintptr_t)0);
 
@@ -91,11 +122,13 @@ bool LockFreeLinkedList<KeyType, DataType>::insert(KeyType key, DataType data) {
     node_mark_next_ptr.tag = (TagType)0;
     node->mark_ptr_type.store(node_mark_next_ptr);
 
-    MarkPtrType expected = {clear_curr, temp_pmark_curr_ptag.tag};
-    MarkPtrType value = {clear_node, temp_pmark_curr_ptag.tag+1};
+    MarkPtrType expected = {clear_curr, pmark_curr_ptag_temp.tag};
+    MarkPtrType value = {clear_node, pmark_curr_ptag_temp.tag+1};
 
     //Perform a compare_and_swap
     if(prev->compare_exchange_weak(expected,value)){
+      DLOG(INFO) << "Printing in insert after inserting element";
+      print();
       return true;
     }
 
@@ -114,11 +147,14 @@ bool LockFreeLinkedList<KeyType, DataType>::remove(KeyType key) {
       return false;
     }
 
+    DLOG(INFO) << "Printing in remove before delete";
+    print();
+
     MarkPtrType pmark_curr_ptag_temp = pmark_curr_ptag.load();
-    uintptr_t curr = pmark_curr_ptag_temp.mark_next;
+    uintptr_t pmark_curr = pmark_curr_ptag_temp.mark_next;
     uintptr_t ptag = pmark_curr_ptag_temp.tag;
 
-    uintptr_t clear_curr = curr& (~(uintptr_t)0);
+    uintptr_t clear_curr = pmark_curr& (~(uintptr_t)0);
     NodeType <KeyType, DataType> *clear_curr_node = (NodeType <KeyType, DataType> *)clear_curr;
     MarkPtrType curr_mark_next_tag = clear_curr_node->mark_ptr_type;
     uintptr_t curr_mark_next = curr_mark_next_tag.mark_next;
@@ -142,7 +178,7 @@ bool LockFreeLinkedList<KeyType, DataType>::remove(KeyType key) {
    expected.mark_next = clear_curr;
    expected.tag = ptag;
    value.mark_next = clear_next;
-   value.tag = ptag +1;
+   value.tag = ptag + (TagType)1;
 
    if(prev->compare_exchange_weak(expected,value)){
       //delete_node
@@ -150,7 +186,11 @@ bool LockFreeLinkedList<KeyType, DataType>::remove(KeyType key) {
    else{
     find(key);
    }
-   return true;
+
+  DLOG(INFO) << "Printing in remove after delete";
+  print();
+
+  return true;
   }//while ends here
 
 
@@ -166,7 +206,18 @@ bool LockFreeLinkedList<KeyType, DataType>::search(KeyType key) {
 
 template <class KeyType, class DataType>
 bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
+
+  //print();
+
+  //DLOG(INFO) << "Entering find";
+
+
   try_again:
+
+    if(prev!= NULL){
+      DLOG(INFO) << "prev is not NULL";
+      print();
+    }
 
     //prev = head
     prev = &head;
@@ -174,25 +225,33 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
     //<pmark, curr> = *prev;
     pmark_curr_ptag.store(prev->load());
 
+
+    DLOG(INFO) << "Printing before doing anything in find..";
+    print();
+
     while(true){
 
       //Get curr
       MarkPtrType pmark_curr_ptag_temp = pmark_curr_ptag.load();
-      uintptr_t curr = pmark_curr_ptag_temp.mark_next;
+      uintptr_t pmark_curr = pmark_curr_ptag_temp.mark_next;
       uintptr_t ptag = pmark_curr_ptag_temp.tag;
 
       //if(curr == NULL) return false;
-      if(curr == NULL){
+      if(pmark_curr == NULL){
         return false;
       }
 
+
+
       //<cmark, next> = cur-><mark, next>
-      uintptr_t clear_curr = curr& (~(uintptr_t)0);
+      uintptr_t clear_curr = pmark_curr& (~(uintptr_t)0);
       NodeType <KeyType, DataType> *clear_curr_node = (NodeType <KeyType, DataType> *)clear_curr;
       MarkPtrType curr_mark_next_tag = clear_curr_node->mark_ptr_type;
       uintptr_t curr_mark_next = curr_mark_next_tag.mark_next;
       uintptr_t curr_tag = curr_mark_next_tag.tag;
       uintptr_t clear_curr_mark_next = curr_mark_next& (~(uintptr_t)0);
+
+
 
       MarkPtrType cmark_next_ctag_temp = cmark_next_ctag.load();
       cmark_next_ctag_temp.mark_next = curr_mark_next;
@@ -207,6 +266,11 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
       uintptr_t prev_mark_next = prev_mark_next_tag.mark_next;
       uintptr_t prev_tag = prev_mark_next_tag.tag;
       if((prev_mark_next != clear_curr)  || (prev_tag!=ptag)){
+        DLOG(INFO) << "Printing before hitting first goto";
+        print();
+        DLOG(INFO) << "Hit the first goto";
+        DLOG(INFO) << "Printing after hitting first goto";
+        print();
          goto try_again;
       }
 
@@ -216,26 +280,31 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
 
       if(!cmark){
         if(ckey >= key){
+          DLOG(INFO) << "Fulfill your destiny";
           return ckey == key;
         }
         //prev = &(curr-><mark,next>);
+        DLOG(INFO) << "Changing prev pointer";
         prev_mark_next_tag.mark_next = curr_mark_next;
         prev_mark_next_tag.tag = curr_tag;
         (*prev).store(prev_mark_next_tag);
       }
 
       else{
+        DLOG(INFO) << "In the else case";
         MarkPtrType expected = {clear_curr, ptag};
         MarkPtrType value = {clear_curr_mark_next, ptag+1};
         if(prev->compare_exchange_weak(expected,value)){
           //Delete node
         }
         else{
+          DLOG(INFO) << "Hit the second goto";
           goto try_again;
         }
       }
 
       //<pmark, curr> = <cmark, next>
+      DLOG(INFO) << "Iterating through list";
       pmark_curr_ptag_temp.mark_next = cmark_next;
       pmark_curr_ptag_temp.tag = ctag;
 
@@ -245,6 +314,18 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
     return true;
 }
 
+template <class KeyType, class DataType>
+void LockFreeLinkedList<KeyType, DataType>::print() {
+
+  //void(0);
+   DLOG(INFO) << "---------------------";
+   DLOG(INFO) << "Head  " << ((head.load()).mark_next&(uintptr_t)1) << ":" << ((head.load()).mark_next&(~(uintptr_t)0))  << ":" << (head.load()).tag ;  
+   DLOG(INFO) << "Prev  " << ((prev->load()).mark_next&(uintptr_t)1) << ":" << ((prev->load()).mark_next&(~(uintptr_t)0))  << ":" << (prev->load()).tag ; 
+   DLOG(INFO) << "pmark_curr_ptag  " << ((pmark_curr_ptag.load()).mark_next&(uintptr_t)1) << ":" << ((pmark_curr_ptag.load()).mark_next&(~(uintptr_t)0))  << ":" << (pmark_curr_ptag.load()).tag ;
+   DLOG(INFO) << "cmark_next_ctag  " << ((cmark_next_ctag.load()).mark_next&(uintptr_t)1) << ":" << ((cmark_next_ctag.load()).mark_next&(~(uintptr_t)0))  << ":" << (cmark_next_ctag.load()).tag ;
+   DLOG(INFO) << "---------------------";
+
+}
 
 
 // //**************************************//
@@ -596,17 +677,6 @@ bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
 
 // }
 
-// template <class KeyType, class DataType>
-// void LockFreeLinkedList<KeyType, DataType>::print() {
-
-//   //void(0);
-//    DLOG(INFO) << "---------------------";
-//    DLOG(INFO) << "Head             " << (head.load()).Mark  << ":" << (head.load()).Next << ":" << (head.load()).Tag ;
-//    DLOG(INFO) << "pmark_curr_ptag  " << (pmark_curr_ptag.load()).Mark  << ":" << (pmark_curr_ptag.load()).Next << ":" << (pmark_curr_ptag.load()).Tag ;
-//    DLOG(INFO) << "cmark_next_ctag  " << (cmark_next_ctag.load()).Mark  << ":" << (cmark_next_ctag.load()).Next << ":" << (cmark_next_ctag.load()).Tag ;
-//    DLOG(INFO) << "---------------------";
-
-// }
 
 
 
