@@ -4,6 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdexcept>
+//#include <tools/queue.h>
+
 
 #include <iostream>
 #include <fstream>
@@ -15,6 +17,38 @@
 #include "text_color/text_color.h"
 #include "global_lock_ll/global_lock_linked_list.h"
 #include "lock_free_ll/lock_free_linked_list.h"
+
+/*
+TODO: Remove temporary code for queue until I can figure out Makefile.
+*/
+
+#include <vector>
+
+
+template <class T>
+class Queue {
+
+  private:
+    std::vector<T> storage;
+
+  public:
+    Queue(){
+      ;
+    }
+
+    T dequeue(){
+
+      T item = storage.front();
+      storage.erase(storage.begin());
+      return item;
+    }
+
+    void enqueue(const T& item){
+      storage.push_back(item);
+    }
+};
+
+
 
 // Define the Key and Data type of the Linked-list here.
 typedef int KeyType;
@@ -47,11 +81,7 @@ std::vector<std::string> split( const std::string &str, const char &delim ) {
 /* Test lines should be of the following format:
  *   <commands> <argument(s)...>
  *
- * Supported commands:
- *  insert node and test expected list size:
- *    insert <key> <value>
- *  get value at node identified by key and test expected value:
- *    at <key> <expected value>
+ * Supported commam
  *  search value at node identified by key:
  *    search <key> <expected bool>
  *  remove node by key and test expected list size:
@@ -171,6 +201,10 @@ void run_tests(std::string testfile) {
   bool all_test_success = true;
   LinkedList ll;
 
+  Queue <std::string> work_queue;
+
+
+
   std::ifstream infile;
   infile.open(testfile);
   std::string testline;
@@ -179,7 +213,10 @@ void run_tests(std::string testfile) {
 
   while (infile.good()) {
     getline(infile, testline);
-    result = run_testline(testline, ll);
+    work_queue.enqueue(testline);
+    std::string temp_testline;
+    temp_testline  = work_queue.dequeue();
+    result = run_testline(temp_testline, ll);
     all_test_success &= result;
     error_count += (result ? 0 : 1);
   }
