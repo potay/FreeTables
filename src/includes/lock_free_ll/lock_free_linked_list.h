@@ -18,6 +18,7 @@ struct LockFreeLinkedListBlock {
   TagType tag;
 }__attribute__ ((aligned (16)));
 
+
 template <class KeyType, class DataType>
 bool operator==(const LockFreeLinkedListBlock<KeyType, DataType>& lhs, const LockFreeLinkedListBlock<KeyType, DataType>& rhs) {
   return (lhs.mark == rhs.mark && lhs.next == rhs.next && lhs.tag == rhs.tag);
@@ -52,6 +53,11 @@ class LockFreeLinkedListAtomicBlock {
     bool compare_exchange_weak(const LockFreeLinkedListBlock<KeyType, DataType>& expected, const LockFreeLinkedListBlock<KeyType, DataType>& value) {
       LockFreeLinkedListInternalBlock new_expected = block_to_internal(expected);
       LockFreeLinkedListInternalBlock new_value = block_to_internal(value);
+
+      // if(block.is_lock_free()){
+      //     DLOG(INFO) << "Please be lock-free";
+      // }
+
       return block.compare_exchange_weak(new_expected, new_value);
     }
 
@@ -77,7 +83,7 @@ class LockFreeLinkedListAtomicBlock {
       LockFreeLinkedListBlock<KeyType, DataType> new_block = {mark, next, (TagType)tag};
       return new_block;
     }
-};
+}__attribute__ ((aligned (16)));
 
 template <class KeyType, class DataType>
 class LockFreeLinkedListNode {
@@ -118,7 +124,8 @@ class LockFreeLinkedList {
     bool find(KeyType key);
 
     void print();
-};
+}__attribute__ ((aligned (16)));
+;
 
 
 //**************************************//
