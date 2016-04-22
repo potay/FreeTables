@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdexcept>
 //#include <tools/queue.h>
+#include <pthread.h>
 
 
 #include <iostream>
@@ -24,6 +25,7 @@ TODO: Remove temporary code for queue until I can figure out Makefile.
 
 #include <vector>
 
+#define MAX_THREADS 1
 
 template <class T>
 class Queue {
@@ -37,7 +39,6 @@ class Queue {
     }
 
     T dequeue(){
-
       T item = storage.front();
       storage.erase(storage.begin());
       return item;
@@ -50,10 +51,21 @@ class Queue {
 
 
 
+
 // Define the Key and Data type of the Linked-list here.
 typedef int KeyType;
 typedef std::string DataType;
 typedef LockFreeLinkedList<KeyType, DataType> LinkedList;
+
+
+//Struct for thread arguments
+struct threadArgs{
+
+  LinkedList ll;
+  Queue <std::string> work_queue;
+
+} ;
+
 
 DEFINE_string(testfile, "tests/hello.txt", "Test file to run.");
 DEFINE_bool(debug_print_list, false, "Print a visualization of the linked-list after each test line for debugging purposes.");
@@ -195,6 +207,17 @@ bool run_testline(std::string testline, LinkedList &ll) {
   return success;
 }
 
+//Thread start. Thread deques worker and runs test
+void* thread_start(void* thread_args){
+
+  threadArgs *args = (threadArgs *)thread_args;
+  std::string temp_testline;
+  temp_testline  = (args->work_queue).dequeue();
+  bool result = run_testline(temp_testline, (args->ll));
+  (void) result;
+  return NULL;
+}
+
 
 void run_tests(std::string testfile) {
   DLOG(INFO) << "Starting tests in " << testfile << "...";
@@ -204,6 +227,21 @@ void run_tests(std::string testfile) {
   Queue <std::string> work_queue;
 
 
+  //Create and initialize threads
+  pthread_t threads[MAX_THREADS];
+  threadArgs WorkerArgs[MAX_THREADS];
+
+  for(int i = 0; i < MAX_THREADS; i++){
+     WorkerArgs[i].ll = ll;
+     WorkerArgs[i].work_queue = {work_queue};
+  }
+  
+
+  //Launch threads. 
+  for(int i = 0; i < MAX_THREADS; i++){
+    pthread_create(&threads[i], NULL, thread_start, (void *)&WorkerArgs[i]);
+  }
+   
 
   std::ifstream infile;
   infile.open(testfile);
@@ -214,16 +252,23 @@ void run_tests(std::string testfile) {
   while (infile.good()) {
     getline(infile, testline);
     work_queue.enqueue(testline);
-    std::string temp_testline;
-    temp_testline  = work_queue.dequeue();
-    result = run_testline(temp_testline, ll);
-    all_test_success &= result;
-    error_count += (result ? 0 : 1);
+    //std::string temp_testline;
+    //temp_testline  = work_queue.dequeue();
+    //result = run_testline(temp_testline, ll);
+
+
+    //all_test_success &= result;
+    //error_count += (result ? 0 : 1);
   }
   infile.close();
 
-  DLOG_IF(INFO, all_test_success) << color_green("All tests ran successfully!");
-  DLOG_IF(INFO, !all_test_success) << color_red("Some tests failed! Number of test failed: " + std::to_string(error_count));
+  //DLOG_IF(INFO, all_test_success) << color_green("All tests ran successfully!");
+  //DLOG_IF(INFO, !all_test_success) << color_red("Some tests failed! Number of test failed: " + std::to_string(error_count));
+  (void) all_test_success;
+  (void) result;
+  (void) error_count;
+  DLOG(INFO) << "Multiple threads case";
+
 }
 
 
