@@ -33,14 +33,11 @@ template <class KeyType, class DataType>
 class LockFreeLinkedListAtomicBlock {
   public:
     void store(const LockFreeLinkedListBlock<KeyType, DataType>& b) {
-
       LockFreeLinkedListInternalBlock new_block = block_to_internal(b);
       block.store(new_block);
-
     }
 
     void store(bool mark, LockFreeLinkedListNode<KeyType, DataType> *next, TagType tag) {
-
       LockFreeLinkedListBlock<KeyType, DataType> b = {mark, next, tag};
       store(b);
     }
@@ -53,11 +50,6 @@ class LockFreeLinkedListAtomicBlock {
     bool compare_exchange_weak(const LockFreeLinkedListBlock<KeyType, DataType>& expected, const LockFreeLinkedListBlock<KeyType, DataType>& value) {
       LockFreeLinkedListInternalBlock new_expected = block_to_internal(expected);
       LockFreeLinkedListInternalBlock new_value = block_to_internal(value);
-
-      // if(block.is_lock_free()){
-      //     DLOG(INFO) << "Please be lock-free";
-      // }
-
       return block.compare_exchange_weak(new_expected, new_value);
     }
 
@@ -71,11 +63,10 @@ class LockFreeLinkedListAtomicBlock {
     std::atomic<LockFreeLinkedListInternalBlock> block;
 
     inline LockFreeLinkedListInternalBlock block_to_internal(const LockFreeLinkedListBlock<KeyType, DataType>& b) {
- 
       LockFreeLinkedListInternalBlock new_block = {(b.mark ? ((uintptr_t)(b.next) | (uintptr_t)1) : ((uintptr_t)(b.next) & (~(uintptr_t)1))), b.tag};
- 
       return new_block;
     }
+
     inline LockFreeLinkedListBlock<KeyType, DataType> internal_to_block(const LockFreeLinkedListInternalBlock& b) {
       bool mark = ((b.pointer & (uintptr_t)1) == (uintptr_t)1) ? true : false;
       LockFreeLinkedListNode<KeyType, DataType> *next = (LockFreeLinkedListNode<KeyType, DataType> *)(b.pointer & (~(uintptr_t)1));
@@ -97,33 +88,31 @@ class LockFreeLinkedListNode {
 
 /* Note that KeyType must have an implementation for comparison operators */
 template <class KeyType, class DataType>
-class LockFreeLinkedList {
+class LockFreeLinkedListWorker {
   public:
     /** Linked List operations **/
     // if key does not exists, inserts node in undefined order (will switch to a sorted order) and returns true
     // else returns false
-    bool insert(KeyType key, DataType data);
+    bool insert(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key, DataType data);
     // Returns true if node with key k was found and remove was successful, else false.
-    bool remove(KeyType key);
+    bool remove(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key);
     // Returns true if k is in list, else false
-    bool search(KeyType key);
+    bool search(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key);
 
-    LockFreeLinkedList() {
-      // head.store(false, NULL, 0);
+    // Returns a visual of whatever it can get of ll. Note that if this is not done with thread syncing, will produce funny stuff.
+    std::string visual(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head);
+
+    LockFreeLinkedListWorker() {
       prev = NULL;
-      // pmark_cur_ptag.store(false, NULL, 1);
-      // cmark_next_ctag.store(false, NULL, 2);
     }
 
   private:
-    LockFreeLinkedListAtomicBlock<KeyType, DataType> head;
+    // LockFreeLinkedListAtomicBlock<KeyType, DataType> head;
     LockFreeLinkedListAtomicBlock<KeyType, DataType> *prev;
     LockFreeLinkedListAtomicBlock<KeyType, DataType> pmark_cur_ptag;
     LockFreeLinkedListAtomicBlock<KeyType, DataType> cmark_next_ctag;
 
-    bool find(KeyType key);
-
-    void print();
+    bool find(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key);
 }__attribute__ ((aligned (16)));
 ;
 
@@ -134,11 +123,10 @@ class LockFreeLinkedList {
 
 // Linked List Implementation
 template <class KeyType, class DataType>
-bool LockFreeLinkedList<KeyType, DataType>::insert(KeyType key, DataType data) {
+bool LockFreeLinkedListWorker<KeyType, DataType>::insert(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key, DataType data) {
   LockFreeLinkedListNode<KeyType, DataType> *node = new LockFreeLinkedListNode<KeyType, DataType>(key, data);
-  print();
   while (true) {
-    if (find(key)) {
+    if (find(head, key)) {
       delete node;
       return false;
     }
@@ -152,10 +140,9 @@ bool LockFreeLinkedList<KeyType, DataType>::insert(KeyType key, DataType data) {
 }
 
 template <class KeyType, class DataType>
-bool LockFreeLinkedList<KeyType, DataType>::remove(KeyType key) {
-  print();
+bool LockFreeLinkedListWorker<KeyType, DataType>::remove(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key) {
   while (true) {
-    if (!find(key)) return false;
+    if (!find(head, key)) return false;
     
     LockFreeLinkedListBlock<KeyType, DataType> curr_temp = pmark_cur_ptag.load();
     LockFreeLinkedListBlock<KeyType, DataType> next_temp = cmark_next_ctag.load();
@@ -165,7 +152,6 @@ bool LockFreeLinkedList<KeyType, DataType>::remove(KeyType key) {
     if (!((curr_temp.next->mark_next_tag).compare_exchange_weak(expected, value))) {
       continue;
     }
-    print();
 
     curr_temp = pmark_cur_ptag.load();
     next_temp = cmark_next_ctag.load();
@@ -174,9 +160,9 @@ bool LockFreeLinkedList<KeyType, DataType>::remove(KeyType key) {
     if (prev->compare_exchange_weak(expected, value)) {
       // DeleteNode(curr_temp.next);
       (void)0;
-      print();
+ 
     } else {
-      find(key);
+      find(head, key);
     }
 
     return true;
@@ -184,16 +170,16 @@ bool LockFreeLinkedList<KeyType, DataType>::remove(KeyType key) {
 }
 
 template <class KeyType, class DataType>
-bool LockFreeLinkedList<KeyType, DataType>::search(KeyType key) {
-  return find(key);
+bool LockFreeLinkedListWorker<KeyType, DataType>::search(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key) {
+  return find(head, key);
 }
 
 template <class KeyType, class DataType>
-bool LockFreeLinkedList<KeyType, DataType>::find(KeyType key) {
+bool LockFreeLinkedListWorker<KeyType, DataType>::find(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key) {
 
 try_again:
 
-  prev = &head;
+  prev = head;
   prev->load();
   pmark_cur_ptag.store(prev->load());
   while (true) {
@@ -233,17 +219,16 @@ try_again:
 }
 
 template <class KeyType, class DataType>
-void LockFreeLinkedList<KeyType, DataType>::print() {
-  (void)0;
-  // LockFreeLinkedListAtomicBlock<KeyType, DataType> boo = head;
-  // std::stringstream ss;
-  // ss << "head";
-  // while (true) {
-  //   LockFreeLinkedListNode<KeyType, DataType> *curr = boo.load().next;
-  //   if (curr == NULL) break;
-  //   ss << "->" << curr->mark_next_tag.load().mark << ":" << curr->mark_next_tag.load().tag << ":" << curr->key << ":" << curr->data;
-  //   boo = curr->mark_next_tag;
-  // }
-  // ss << "->foot";
-  // DLOG(INFO) << ss.str();
+std::string LockFreeLinkedListWorker<KeyType, DataType>::visual(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head) {
+  LockFreeLinkedListAtomicBlock<KeyType, DataType> *boo = head;
+  std::stringstream ss;
+  ss << "head";
+  while (true) {
+    LockFreeLinkedListNode<KeyType, DataType> *curr = boo->load().next;
+    if (curr == NULL) break;
+    ss << "->" << curr->mark_next_tag.load().mark << ":" << curr->mark_next_tag.load().tag << ":" << curr->key << ":" << curr->data;
+    boo = &(curr->mark_next_tag);
+  }
+  ss << "->foot";
+  return ss.str();
 }
