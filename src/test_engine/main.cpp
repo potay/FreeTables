@@ -23,6 +23,7 @@
 TODO: Remove temporary code for queue until I can figure out Makefile.
 */
 
+
 #include <vector>
 
 #define MAX_THREADS 1
@@ -32,23 +33,41 @@ class Queue {
 
   private:
     std::vector<T> storage;
+    pthread_mutex_t queue_lock;
+    pthread_cond_t queue_cond;
 
   public:
     Queue(){
-      ;
+      pthread_cond_init(&queue_cond, NULL);
+      pthread_mutex_init(&queue_lock, NULL);
     }
 
     T dequeue(){
+
+      pthread_mutex_lock(&queue_lock);
+
+      while(storage.size() == 0){
+        pthread_cond_wait(&queue_cond, &queue_lock);
+      }
+
+
+      //DLOG(INFO) << "Entering dequeue";
       T item = storage.front();
+      //DLOG(INFO) << "Successfully got item";
       storage.erase(storage.begin());
+      //DLOG(INFO) << "Item obtained" << item;
+
+      pthread_mutex_unlock(&queue_lock);
       return item;
     }
 
     void enqueue(const T& item){
+      pthread_mutex_lock(&queue_lock);
       storage.push_back(item);
+      pthread_mutex_unlock(&queue_lock);
+      pthread_cond_signal(&queue_cond);
     }
 };
-
 
 
 
@@ -58,11 +77,16 @@ typedef std::string DataType;
 typedef LockFreeLinkedList<KeyType, DataType> LinkedList;
 
 
+//Define global variables.
+Queue <std::string> work_queue;
+LinkedList ll;
+
+
 //Struct for thread arguments
 struct threadArgs{
 
-  LinkedList ll;
-  Queue <std::string> work_queue;
+  //LinkedList ll;
+  //Queue <std::string> work_queue;
 
 } ;
 
@@ -210,11 +234,32 @@ bool run_testline(std::string testline, LinkedList &ll) {
 //Thread start. Thread deques worker and runs test
 void* thread_start(void* thread_args){
 
+  DLOG(INFO) << "Entering the thread_start function";
+
   threadArgs *args = (threadArgs *)thread_args;
   std::string temp_testline;
-  temp_testline  = (args->work_queue).dequeue();
-  bool result = run_testline(temp_testline, (args->ll));
-  (void) result;
+
+
+  if(args == NULL){ 
+    DLOG(INFO) << "Why is args NULL";
+
+    // if(args->work_queue == NULL){
+    //   DLOG(INFO) << "Why is args->work_queue NULL";
+    // }
+  }
+ 
+
+  
+  temp_testline  = (work_queue).dequeue();
+
+  // if(temp_testline == NULL){
+  //   DLOG(INFO) << "Why is the testline NULL";
+  // }
+
+  DLOG(INFO) << "Testline for the work_queue " << temp_testline;
+
+  //bool result = run_testline(temp_testline, (ll));
+  //(void) result;
   return NULL;
 }
 
@@ -222,9 +267,9 @@ void* thread_start(void* thread_args){
 void run_tests(std::string testfile) {
   DLOG(INFO) << "Starting tests in " << testfile << "...";
   bool all_test_success = true;
-  LinkedList ll;
+ 
 
-  Queue <std::string> work_queue;
+  
 
 
   //Create and initialize threads
@@ -232,8 +277,8 @@ void run_tests(std::string testfile) {
   threadArgs WorkerArgs[MAX_THREADS];
 
   for(int i = 0; i < MAX_THREADS; i++){
-     WorkerArgs[i].ll = ll;
-     WorkerArgs[i].work_queue = {work_queue};
+     //WorkerArgs[i].ll = ll;
+     //WorkerArgs[i].work_queue = work_queue;
   }
   
 
@@ -251,12 +296,17 @@ void run_tests(std::string testfile) {
 
   while (infile.good()) {
     getline(infile, testline);
-    work_queue.enqueue(testline);
+
+    //DLOG(INFO) << "About the enqueue into LinkedList";
+    //DLOG(INFO) << "testline :" << testline;
+    work_queue.enqueue(testline) ; 
+    // std::string temp = work_queue.dequeue();
+    // DLOG(INFO) << "temp testline" << temp;
+    //DLOG(INFO) << "Enqueue completed successfully";
+
     //std::string temp_testline;
     //temp_testline  = work_queue.dequeue();
     //result = run_testline(temp_testline, ll);
-
-
     //all_test_success &= result;
     //error_count += (result ? 0 : 1);
   }
