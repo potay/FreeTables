@@ -246,15 +246,6 @@ void* thread_start(void* thread_args){
   std::string temp_testline;
 
 
-  if(args == NULL){ 
-    DLOG(INFO) << "Why is args NULL";
-
-    // if(args->work_queue == NULL){
-    //   DLOG(INFO) << "Why is args->work_queue NULL";
-    // }
-  }
- 
-
   while(work_queue.queue_size > 0){
 
   temp_testline  = (work_queue).dequeue();
@@ -263,14 +254,7 @@ void* thread_start(void* thread_args){
  
   }
 
-  // if(temp_testline == NULL){
-  //   DLOG(INFO) << "Why is the testline NULL";
-  // }
 
-
-
-  //bool result = run_testline(temp_testline, (ll));
-  //(void) result;
   return NULL;
 }
 
@@ -284,6 +268,11 @@ void run_tests(std::string testfile) {
   pthread_t threads[MAX_THREADS];
   threadArgs WorkerArgs[MAX_THREADS];
 
+  /*Not setting arguments for threads.
+    Using a global linked list and a global
+    queue instead as passing in arguments  in the manner
+    shown in comments was not compiling*/
+  
   for(int i = 0; i < MAX_THREADS; i++){
      //WorkerArgs[i].ll = ll;
      //WorkerArgs[i].work_queue = work_queue;
@@ -307,7 +296,7 @@ void run_tests(std::string testfile) {
 
     //DLOG(INFO) << "About the enqueue into LinkedList";
     //DLOG(INFO) << "testline :" << testline;
-    work_queue.enqueue(testline) ; 
+    work_queue.enqueue(testline); 
     // std::string temp = work_queue.dequeue();
     // DLOG(INFO) << "temp testline" << temp;
     //DLOG(INFO) << "Enqueue completed successfully";
@@ -325,14 +314,16 @@ void run_tests(std::string testfile) {
   (void) all_test_success;
   (void) result;
   (void) error_count;
-  DLOG(INFO) << "Multiple threads case";
+  DLOG(INFO) << "Before joining threads";
 
   //Wait for threads to complete
   for(int i = 0; i < MAX_THREADS; i++){
      pthread_join(threads[i], NULL);
   }
 
-}
+  DLOG(INFO) << "After joining threads";
+
+} 
 
 
 int main(int argc, char *argv[]) {
