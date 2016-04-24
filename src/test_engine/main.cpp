@@ -4,9 +4,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdexcept>
-//#include <tools/queue.h>
-#include <pthread.h>
-
 
 #include <iostream>
 #include <fstream>
@@ -19,83 +16,10 @@
 #include "global_lock_ll/global_lock_linked_list.h"
 #include "lock_free_ll/lock_free_linked_list.h"
 
-/*
-TODO: Remove temporary code for queue until I can figure out Makefile.
-*/
-
-
-#include <vector>
-
-#define MAX_THREADS 1
-
-template <class T>
-class Queue {
-
-  private:
-    std::vector<T> storage;
-    pthread_mutex_t queue_lock;
-    pthread_cond_t queue_cond;
-
-  public:
-    int queue_size;
-
-    Queue(){
-      pthread_cond_init(&queue_cond, NULL);
-      pthread_mutex_init(&queue_lock, NULL);
-      queue_size = storage.size();
-    }
-
-    T dequeue(){
-
-      pthread_mutex_lock(&queue_lock);
-
-      while(storage.size() == 0){
-        pthread_cond_wait(&queue_cond, &queue_lock);
-      }
-
-
-      //DLOG(INFO) << "Entering dequeue";
-      T item = storage.front();
-      //DLOG(INFO) << "Successfully got item";
-      storage.erase(storage.begin());
-      //DLOG(INFO) << "Item obtained" << item;
-
-      queue_size = storage.size();
-      pthread_mutex_unlock(&queue_lock);
-
-      return item;
-    }
-
-    void enqueue(const T& item){
-      pthread_mutex_lock(&queue_lock);
-      storage.push_back(item);
-      queue_size = storage.size();
-      pthread_mutex_unlock(&queue_lock);
-      pthread_cond_signal(&queue_cond);
-    }
-};
-
-
-
 // Define the Key and Data type of the Linked-list here.
 typedef int KeyType;
 typedef std::string DataType;
 typedef LockFreeLinkedList<KeyType, DataType> LinkedList;
-
-
-//Define global variables.
-Queue <std::string> work_queue;
-LinkedList ll;
-
-
-//Struct for thread arguments
-struct threadArgs{
-
-  //LinkedList ll;
-  //Queue <std::string> work_queue;
-
-} ;
-
 
 DEFINE_string(testfile, "tests/hello.txt", "Test file to run.");
 DEFINE_bool(debug_print_list, false, "Print a visualization of the linked-list after each test line for debugging purposes.");
@@ -123,7 +47,11 @@ std::vector<std::string> split( const std::string &str, const char &delim ) {
 /* Test lines should be of the following format:
  *   <commands> <argument(s)...>
  *
- * Supported commam
+ * Supported commands:
+ *  insert node and test expected list size:
+ *    insert <key> <value>
+ *  get value at node identified by key and test expected value:
+ *    at <key> <expected value>
  *  search value at node identified by key:
  *    search <key> <expected bool>
  *  remove node by key and test expected list size:
@@ -237,53 +165,11 @@ bool run_testline(std::string testline, LinkedList &ll) {
   return success;
 }
 
-//Thread start. Thread deques worker and runs test
-void* thread_start(void* thread_args){
-
-  DLOG(INFO) << "Entering the thread_start function";
-
-  threadArgs *args = (threadArgs *)thread_args;
-  std::string temp_testline;
-
-
-  while(work_queue.queue_size > 0){
-
-  temp_testline  = (work_queue).dequeue();
-  DLOG(INFO) << "Testline for the work_queue " << temp_testline;
-  bool result = run_testline(temp_testline, (ll));
- 
-  }
-
-
-  return NULL;
-}
-
 
 void run_tests(std::string testfile) {
   DLOG(INFO) << "Starting tests in " << testfile << "...";
   bool all_test_success = true;
- 
-
-  //Create and initialize threads
-  pthread_t threads[MAX_THREADS];
-  threadArgs WorkerArgs[MAX_THREADS];
-
-  /*Not setting arguments for threads.
-    Using a global linked list and a global
-    queue instead as passing in arguments  in the manner
-    shown in comments was not compiling*/
-  
-  for(int i = 0; i < MAX_THREADS; i++){
-     //WorkerArgs[i].ll = ll;
-     //WorkerArgs[i].work_queue = work_queue;
-  }
-  
-
-  //Launch threads. 
-  for(int i = 0; i < MAX_THREADS; i++){
-    pthread_create(&threads[i], NULL, thread_start, (void *)&WorkerArgs[i]);
-  }
-   
+  LinkedList ll;
 
   std::ifstream infile;
   infile.open(testfile);
@@ -293,37 +179,15 @@ void run_tests(std::string testfile) {
 
   while (infile.good()) {
     getline(infile, testline);
-
-    //DLOG(INFO) << "About the enqueue into LinkedList";
-    //DLOG(INFO) << "testline :" << testline;
-    work_queue.enqueue(testline); 
-    // std::string temp = work_queue.dequeue();
-    // DLOG(INFO) << "temp testline" << temp;
-    //DLOG(INFO) << "Enqueue completed successfully";
-
-    //std::string temp_testline;
-    //temp_testline  = work_queue.dequeue();
-    //result = run_testline(temp_testline, ll);
-    //all_test_success &= result;
-    //error_count += (result ? 0 : 1);
+    result = run_testline(testline, ll);
+    all_test_success &= result;
+    error_count += (result ? 0 : 1);
   }
   infile.close();
 
-  //DLOG_IF(INFO, all_test_success) << color_green("All tests ran successfully!");
-  //DLOG_IF(INFO, !all_test_success) << color_red("Some tests failed! Number of test failed: " + std::to_string(error_count));
-  (void) all_test_success;
-  (void) result;
-  (void) error_count;
-  DLOG(INFO) << "Before joining threads";
-
-  //Wait for threads to complete
-  for(int i = 0; i < MAX_THREADS; i++){
-     pthread_join(threads[i], NULL);
-  }
-
-  DLOG(INFO) << "After joining threads";
-
-} 
+  DLOG_IF(INFO, all_test_success) << color_green("All tests ran successfully!");
+  DLOG_IF(INFO, !all_test_success) << color_red("Some tests failed! Number of test failed: " + std::to_string(error_count));
+}
 
 
 int main(int argc, char *argv[]) {
