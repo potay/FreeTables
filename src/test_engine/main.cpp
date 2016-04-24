@@ -26,7 +26,7 @@ TODO: Remove temporary code for queue until I can figure out Makefile.
 
 #include <vector>
 
-#define MAX_THREADS 3
+#define MAX_THREADS 1
 
 template <class T>
 class Queue {
@@ -259,6 +259,7 @@ void* thread_start(void* thread_args){
 
   temp_testline  = (work_queue).dequeue();
   DLOG(INFO) << "Testline for the work_queue " << temp_testline;
+  bool result = run_testline(temp_testline, (ll));
  
   }
 
