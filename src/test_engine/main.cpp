@@ -26,7 +26,7 @@ TODO: Remove temporary code for queue until I can figure out Makefile.
 
 #include <vector>
 
-#define MAX_THREADS 1
+#define MAX_THREADS 3
 
 template <class T>
 class Queue {
@@ -37,9 +37,12 @@ class Queue {
     pthread_cond_t queue_cond;
 
   public:
+    int queue_size;
+
     Queue(){
       pthread_cond_init(&queue_cond, NULL);
       pthread_mutex_init(&queue_lock, NULL);
+      queue_size = storage.size();
     }
 
     T dequeue(){
@@ -57,13 +60,16 @@ class Queue {
       storage.erase(storage.begin());
       //DLOG(INFO) << "Item obtained" << item;
 
+      queue_size = storage.size();
       pthread_mutex_unlock(&queue_lock);
+
       return item;
     }
 
     void enqueue(const T& item){
       pthread_mutex_lock(&queue_lock);
       storage.push_back(item);
+      queue_size = storage.size();
       pthread_mutex_unlock(&queue_lock);
       pthread_cond_signal(&queue_cond);
     }
@@ -249,14 +255,18 @@ void* thread_start(void* thread_args){
   }
  
 
-  
+  while(work_queue.queue_size > 0){
+
   temp_testline  = (work_queue).dequeue();
+  DLOG(INFO) << "Testline for the work_queue " << temp_testline;
+ 
+  }
 
   // if(temp_testline == NULL){
   //   DLOG(INFO) << "Why is the testline NULL";
   // }
 
-  DLOG(INFO) << "Testline for the work_queue " << temp_testline;
+
 
   //bool result = run_testline(temp_testline, (ll));
   //(void) result;
@@ -268,9 +278,6 @@ void run_tests(std::string testfile) {
   DLOG(INFO) << "Starting tests in " << testfile << "...";
   bool all_test_success = true;
  
-
-  
-
 
   //Create and initialize threads
   pthread_t threads[MAX_THREADS];
@@ -318,6 +325,11 @@ void run_tests(std::string testfile) {
   (void) result;
   (void) error_count;
   DLOG(INFO) << "Multiple threads case";
+
+  //Wait for threads to complete
+  for(int i = 0; i < MAX_THREADS; i++){
+     pthread_join(threads[i], NULL);
+  }
 
 }
 
