@@ -14,17 +14,22 @@
 #include <thread>
 #include <mutex>
 #include <condition_variable>
+#include <ctime>
 
 #include "text_color/text_color.h"
 #include "global_lock_ll/global_lock_linked_list.h"
 #include "lock_free_ll/lock_free_linked_list.h"
 #include "work_queue/work_queue.h"
+#include "cycle_timer/cycle_timer.h"
 
-#define MAX_WORKERS 10
+#define MAX_WORKERS 48
+#define NDEBUG
 
 // Define the Key and Data type of the Linked-list here.
 typedef int KeyType;
 typedef std::string DataType;
+typedef GlobalLockLinkedListWorker<KeyType, DataType> StandardLinkedListWorker;
+typedef GlobalLockLinkedListHeader<KeyType, DataType> StandardLinkedListHead;
 typedef LockFreeLinkedListWorker<KeyType, DataType> LinkedListWorker;
 typedef LockFreeLinkedListAtomicBlock<KeyType, DataType> LinkedListHead;
 
@@ -64,7 +69,8 @@ std::vector<std::string> split( const std::string &str, const char &delim ) {
  *  remove node by key and test expected list size:
  *    remove <key> <expected size>
  */
-bool process_testline(LinkedListHead *head, std::vector<std::string> tokens, LinkedListWorker &ll) {
+template <class Head, class Worker>
+bool process_testline(Head *head, std::vector<std::string> tokens, Worker &ll) {
   KeyType k;
   DataType d;
 
@@ -134,14 +140,15 @@ bool process_testline(LinkedListHead *head, std::vector<std::string> tokens, Lin
 }
 
 
-bool run_testline(LinkedListHead *head, std::string testline, LinkedListWorker &ll) {
+template <class Head, class Worker>
+bool run_testline(Head *head, std::string testline, Worker &ll) {
   DLOG(INFO) << "Testing line: " << color_blue(testline);
 
   // Split line into its tokens
   std::vector<std::string> tokens = split(testline, ' ');
 
   // Run testline
-  bool success = process_testline(head, tokens, ll);
+  bool success = process_testline<Head, Worker>(head, tokens, ll);
 
   // Print testline results
   DLOG(INFO) << "Testline complete. "
@@ -152,15 +159,16 @@ bool run_testline(LinkedListHead *head, std::string testline, LinkedListWorker &
 }
 
 
-void worker_start(unsigned id, LinkedListHead *head, WorkQueue<std::string> *work_queue, bool *done, Barrier *worker_barrier, bool *result) {
+template <class Head, class Worker>
+void worker_start(unsigned id, Head *head, WorkQueue<std::string> *work_queue, bool *done, Barrier *worker_barrier, bool *result) {
   DLOG(INFO) << "Instantiated worker " << id;
-  LinkedListWorker ll;
+  Worker ll;
   bool has_work;
   std::string testline;
   while (1) {
     has_work = work_queue->check_and_get_work(testline);
     if (has_work) {
-      *result = run_testline(head, testline, ll) && *result;
+      *result = run_testline<Head, Worker>(head, testline, ll) && *result;
     } else if (*done) {
       break;
     } else {
@@ -175,22 +183,26 @@ void join_all(std::vector<std::thread>& v){
 }
 
 
-void run_tests(std::string testfile) {
+template <class Head, class Worker>
+double run_linkedlist_tests(std::string testfile) {
   DLOG(INFO) << "Initializing testing environment...";
 
   // Initialize data structures
-  LinkedListHead head;
+  Head head;
   WorkQueue<std::string> work_queue;
   std::vector<std::thread> workers;
-  Barrier worker_barrier(MAX_WORKERS + 1);
+  Barrier worker_barrier(std::thread::hardware_concurrency() + 1);
   bool done = false;
-  bool result[MAX_WORKERS];
+  bool result[std::thread::hardware_concurrency()];
 
   // Initialize worker pool
-  for (unsigned i = 0; i < MAX_WORKERS; ++i) {
+  for (unsigned i = 0; i < std::thread::hardware_concurrency(); ++i) {
     result[i] = true;
-    workers.emplace_back(std::thread(worker_start, i, &head, &work_queue, &done, &worker_barrier, &result[i]));
+    workers.emplace_back(std::thread(worker_start<Head, Worker>, i, &head, &work_queue, &done, &worker_barrier, &result[i]));
   }
+
+  // Starting the clock
+  double start_time = CycleTimer::currentSeconds();
 
   // Starting enqueue-ing of tests...
   DLOG(INFO) << "Starting tests in " << testfile << "...";
@@ -215,18 +227,23 @@ void run_tests(std::string testfile) {
   done = true;
   join_all(workers);
 
+  // Stopping the clock
+  double end_time = CycleTimer::currentSeconds();
+
   // Check results
-  for (unsigned i = 0; i < MAX_WORKERS; ++i) {
+  for (unsigned i = 0; i < std::thread::hardware_concurrency(); ++i) {
     all_test_success &= result[i];
   }
 
   DLOG_IF(INFO, all_test_success) << color_green("All tests ran successfully!");
   DLOG_IF(INFO, !all_test_success) << color_red("Some tests failed!");
+
+  return (end_time - start_time);
 }
 
 
 int main(int argc, char *argv[]) {
-  FLAGS_logtostderr = 1;
+  // FLAGS_logtostderr = 1;
   // FLAGS_log_dir = "logs";
 
   std::string usage("Usage: " + std::string(argv[0]) +
@@ -239,7 +256,10 @@ int main(int argc, char *argv[]) {
 
   google::ParseCommandLineFlags(&argc, &argv, true);
 
-  run_tests(FLAGS_testfile);
+  double standard_time = run_linkedlist_tests<StandardLinkedListHead, StandardLinkedListWorker>(FLAGS_testfile);
+  std::cout << "STANDARD: " << standard_time << std::endl;
+  double new_time = run_linkedlist_tests<LinkedListHead, LinkedListWorker>(FLAGS_testfile);
+  std::cout << "MEASURED: " << new_time << std::endl;
 
   return 0;
 }
