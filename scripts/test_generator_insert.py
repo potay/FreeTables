@@ -1,12 +1,12 @@
 import random
 
-n = 100
+n = 1000000
 count = 0
 difference = 0
 keys = []
 output = ""
 for i in xrange(n):
-  if (random.random() < 0.4):
+  if (random.random() < 0):
     random.shuffle(keys)
     for j in xrange(random.randint(0,len(keys))):
       key = keys.pop()
