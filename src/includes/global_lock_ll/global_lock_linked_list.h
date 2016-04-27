@@ -72,6 +72,8 @@ class GlobalLockLinkedListWorker {
     bool remove(GlobalLockLinkedListHeader<KeyType, DataType> *header, KeyType k);
     // Returns true if k is in list, else false
     bool search(GlobalLockLinkedListHeader<KeyType, DataType> *header, KeyType k);
+    // Returns true if k is in list and puts value in value container, else false
+    bool get(GlobalLockLinkedListHeader<KeyType, DataType> *head, KeyType key, DataType& data_container);
 
     // Returns human-readable visualization of linked-list
     std::string visual(GlobalLockLinkedListHeader<KeyType, DataType> *header);
@@ -195,6 +197,18 @@ bool GlobalLockLinkedListWorker<KeyType, DataType>::search(GlobalLockLinkedListH
   std::unique_lock<std::mutex> lock(header->list_lock);
   GlobalLockLinkedListNode<KeyType, DataType> *node = find(header, k);
   return (node != NULL && node->get_key() == k);
+}
+
+template <class KeyType, class DataType>
+bool GlobalLockLinkedListWorker<KeyType, DataType>::get(GlobalLockLinkedListHeader<KeyType, DataType> *header, KeyType k, DataType& data_container) {
+  std::unique_lock<std::mutex> lock(header->list_lock);
+  GlobalLockLinkedListNode<KeyType, DataType> *node = find(header, k);
+  if (node != NULL && node->get_key() == k) {
+    data_container = node->access_data();
+    return true;
+  } else {
+    return false;
+  }
 }
 
 template <class KeyType, class DataType>
