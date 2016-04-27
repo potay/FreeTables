@@ -98,6 +98,8 @@ class LockFreeLinkedListWorker {
     bool remove(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key);
     // Returns true if k is in list, else false
     bool search(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key);
+    // Returns true if k is in list and puts value in value container, else false
+    bool get(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key, DataType& data_container);
 
     // Returns a visual of whatever it can get of ll. Note that if this is not done with thread syncing, will produce funny stuff.
     std::string visual(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head);
@@ -175,6 +177,16 @@ bool LockFreeLinkedListWorker<KeyType, DataType>::search(LockFreeLinkedListAtomi
 }
 
 template <class KeyType, class DataType>
+bool LockFreeLinkedListWorker<KeyType, DataType>::get(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key, DataType& data_container) {
+  if (find(head, key)) {
+    data_container = pmark_cur_ptag.load().next->data;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+template <class KeyType, class DataType>
 bool LockFreeLinkedListWorker<KeyType, DataType>::find(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key) {
 
 try_again:
@@ -226,7 +238,8 @@ std::string LockFreeLinkedListWorker<KeyType, DataType>::visual(LockFreeLinkedLi
   while (true) {
     LockFreeLinkedListNode<KeyType, DataType> *curr = boo->load().next;
     if (curr == NULL) break;
-    ss << "->" << curr->mark_next_tag.load().mark << ":" << curr->mark_next_tag.load().tag << ":" << curr->key << ":" << curr->data;
+    // ss << "->" << curr->mark_next_tag.load().mark << ":" << curr->mark_next_tag.load().tag << ":" << curr->key << ":" << curr->data;
+    ss << "->" << curr->key << ":" << curr->data;
     boo = &(curr->mark_next_tag);
   }
   ss << "->foot";
