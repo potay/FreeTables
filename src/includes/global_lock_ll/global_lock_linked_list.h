@@ -48,6 +48,8 @@ class GlobalLockLinkedListHeader {
     inline void set_end(GlobalLockLinkedListNode<KeyType, DataType> *node) { end = node; }
     inline GlobalLockLinkedListNode<KeyType, DataType>* get_end() { return end; }
 
+    std::mutex list_lock;
+
   private:
     int size;
     GlobalLockLinkedListNode<KeyType, DataType> *start;
@@ -57,34 +59,26 @@ class GlobalLockLinkedListHeader {
 
 /* Note that KeyType must have an implementation for comparison operators */
 template <class KeyType, class DataType>
-class GlobalLockLinkedList {
+class GlobalLockLinkedListWorker {
   public:
     // Constructors
-    GlobalLockLinkedList();
+    GlobalLockLinkedListWorker();
 
     /** Linked List operations **/
     // if key does not exists, inserts node in undefined order (will switch to a sorted order) and returns true
     // else returns false
-    bool insert(KeyType k, DataType d);
+    bool insert(GlobalLockLinkedListHeader<KeyType, DataType> *header, KeyType k, DataType d);
     // Returns true if node with key k was found and remove was successful, else false.
-    bool remove(KeyType k);
-    // Returns a reference to data at node with key k. 
-    // If k does not exist, throws out_of_range exception.
-    DataType& at(KeyType k);
+    bool remove(GlobalLockLinkedListHeader<KeyType, DataType> *header, KeyType k);
     // Returns true if k is in list, else false
-    bool search(KeyType k);
-
-    // Status checkers
-    int size() { return header.get_size(); }
-    bool empty() { return header.get_size() == 0; }
+    bool search(GlobalLockLinkedListHeader<KeyType, DataType> *header, KeyType k);
 
     // Returns human-readable visualization of linked-list
-    std::string get_visual();
+    std::string visual(GlobalLockLinkedListHeader<KeyType, DataType> *header);
 
   private:
-    GlobalLockLinkedListHeader<KeyType, DataType> header;
     // Returns pointer to node in list that has key k1 <= k, or NULL if no such node exists.
-    GlobalLockLinkedListNode<KeyType, DataType>* find(KeyType k);
+    GlobalLockLinkedListNode<KeyType, DataType>* find(GlobalLockLinkedListHeader<KeyType, DataType> *header, KeyType k);
 };
 
 
@@ -126,13 +120,14 @@ GlobalLockLinkedListHeader<KeyType, DataType>::GlobalLockLinkedListHeader(const 
 
 // Linked List Implementation
 template <class KeyType, class DataType>
-GlobalLockLinkedList<KeyType, DataType>::GlobalLockLinkedList() {
-  GlobalLockLinkedListHeader<KeyType, DataType> header;
+GlobalLockLinkedListWorker<KeyType, DataType>::GlobalLockLinkedListWorker() {
+  ;
 }
 
 template <class KeyType, class DataType>
-bool GlobalLockLinkedList<KeyType, DataType>::insert(KeyType k, DataType d) {
-  GlobalLockLinkedListNode<KeyType, DataType> *node = find(k);
+bool GlobalLockLinkedListWorker<KeyType, DataType>::insert(GlobalLockLinkedListHeader<KeyType, DataType> *header, KeyType k, DataType d) {
+  std::unique_lock<std::mutex> lock(header->list_lock);
+  GlobalLockLinkedListNode<KeyType, DataType> *node = find(header, k);
 
   if (node != NULL && node->get_key() == k) {
     return false;
@@ -141,24 +136,24 @@ bool GlobalLockLinkedList<KeyType, DataType>::insert(KeyType k, DataType d) {
     GlobalLockLinkedListNode<KeyType, DataType> *new_node = new GlobalLockLinkedListNode<KeyType, DataType>(k, d);
 
     if (node == NULL) {
-      if (header.get_start() != NULL) {
-        assert(k < header.get_start()->get_key());
-        header.get_start()->set_previous(new_node);
-        new_node->set_next(header.get_start());
+      if (header->get_start() != NULL) {
+        assert(k < header->get_start()->get_key());
+        header->get_start()->set_previous(new_node);
+        new_node->set_next(header->get_start());
       }
 
-      header.set_start(new_node);
+      header->set_start(new_node);
       
-      if (header.get_end() == NULL) {
-        assert(header.get_size() == 0);
-        header.set_end(new_node);
+      if (header->get_end() == NULL) {
+        assert(header->get_size() == 0);
+        header->set_end(new_node);
       }
     } else {
       new_node->set_previous(node);
 
       if (node->get_next() == NULL) {
-        assert(header.get_end() == node);
-        header.set_end(new_node);
+        assert(header->get_end() == node);
+        header->set_end(new_node);
       } else {
         new_node->set_next(node->get_next());
         node->get_next()->set_previous(new_node);
@@ -167,25 +162,26 @@ bool GlobalLockLinkedList<KeyType, DataType>::insert(KeyType k, DataType d) {
       node->set_next(new_node);
     }
     
-    header.inc_size();
+    header->inc_size();
     return true;
 
   }
 }
 
 template <class KeyType, class DataType>
-bool GlobalLockLinkedList<KeyType, DataType>::remove(KeyType k) {
-  GlobalLockLinkedListNode<KeyType, DataType> *curr_node = find(k);
+bool GlobalLockLinkedListWorker<KeyType, DataType>::remove(GlobalLockLinkedListHeader<KeyType, DataType> *header, KeyType k) {
+  std::unique_lock<std::mutex> lock(header->list_lock);
+  GlobalLockLinkedListNode<KeyType, DataType> *curr_node = find(header, k);
   if (curr_node != NULL && curr_node->get_key() == k) {
     GlobalLockLinkedListNode<KeyType, DataType> *next_node = curr_node->get_next();
     GlobalLockLinkedListNode<KeyType, DataType> *previous_node = curr_node->get_previous();
     if (previous_node != NULL) previous_node->set_next(next_node);
     if (next_node != NULL) next_node->set_previous(previous_node);
 
-    if (header.get_start() == curr_node) header.set_start(next_node);
-    if (header.get_end() == curr_node) header.set_end(previous_node);
+    if (header->get_start() == curr_node) header->set_start(next_node);
+    if (header->get_end() == curr_node) header->set_end(previous_node);
 
-    header.dec_size();
+    header->dec_size();
     delete curr_node;
 
     return true;
@@ -195,23 +191,15 @@ bool GlobalLockLinkedList<KeyType, DataType>::remove(KeyType k) {
 }
 
 template <class KeyType, class DataType>
-DataType& GlobalLockLinkedList<KeyType, DataType>::at(KeyType k) {
-  GlobalLockLinkedListNode<KeyType, DataType> *node = find(k);
-  if (node != NULL && node->get_key() == k) {
-    return node->access_data();
-  }
-  throw std::out_of_range("Key does not exist.");;
-}
-
-template <class KeyType, class DataType>
-bool GlobalLockLinkedList<KeyType, DataType>::search(KeyType k) {
-  GlobalLockLinkedListNode<KeyType, DataType> *node = find(k);
+bool GlobalLockLinkedListWorker<KeyType, DataType>::search(GlobalLockLinkedListHeader<KeyType, DataType> *header, KeyType k) {
+  std::unique_lock<std::mutex> lock(header->list_lock);
+  GlobalLockLinkedListNode<KeyType, DataType> *node = find(header, k);
   return (node != NULL && node->get_key() == k);
 }
 
 template <class KeyType, class DataType>
-GlobalLockLinkedListNode<KeyType, DataType>* GlobalLockLinkedList<KeyType, DataType>::find(KeyType k) {
-  GlobalLockLinkedListNode<KeyType, DataType> *curr_node = header.get_start();
+GlobalLockLinkedListNode<KeyType, DataType>* GlobalLockLinkedListWorker<KeyType, DataType>::find(GlobalLockLinkedListHeader<KeyType, DataType> *header, KeyType k) {
+  GlobalLockLinkedListNode<KeyType, DataType> *curr_node = header->get_start();
   GlobalLockLinkedListNode<KeyType, DataType> *prev_node = NULL;
   while (curr_node != NULL) {
     if (k < curr_node->get_key()) break;
@@ -222,12 +210,13 @@ GlobalLockLinkedListNode<KeyType, DataType>* GlobalLockLinkedList<KeyType, DataT
 }
 
 template <class KeyType, class DataType>
-std::string GlobalLockLinkedList<KeyType, DataType>::get_visual() {
+std::string GlobalLockLinkedListWorker<KeyType, DataType>::visual(GlobalLockLinkedListHeader<KeyType, DataType> *header) {
+  std::unique_lock<std::mutex> lock(header->list_lock);
   std::stringstream ss;
 
   ss << "start";
 
-  GlobalLockLinkedListNode<KeyType, DataType> *curr_node = header.get_start();
+  GlobalLockLinkedListNode<KeyType, DataType> *curr_node = header->get_start();
   GlobalLockLinkedListNode<KeyType, DataType> *prev_node = NULL;
   while (curr_node != NULL) {
     ss << ((curr_node->get_previous() == prev_node) ? "<" : "")
@@ -239,7 +228,7 @@ std::string GlobalLockLinkedList<KeyType, DataType>::get_visual() {
     curr_node = curr_node->get_next();
   }
 
-  if (header.get_end() != prev_node) {
+  if (header->get_end() != prev_node) {
     ss << "-/->end";
   } else {
     ss << "->end";
