@@ -24,6 +24,10 @@ $(eval $(call define_library,lock_free_ll, \
         $(INCLUDEDIR)/lock_free_ll/lock_free_linked_list.cpp      \
 ))
 
+$(eval $(call define_library,hashtable, \
+        $(INCLUDEDIR)/hashtable/hashtable.cpp      \
+))
+
 $(eval $(call define_library,work_queue, \
         $(INCLUDEDIR)/work_queue/work_queue.cpp      \
 ))
