@@ -7,6 +7,19 @@
 #include <sstream>
 #include <iostream>
 
+#define HP_LEN 3;
+typedef uintptr_t TagType;
+
+template <class KeyType, class DataType>
+class LockFreeLinkedListNode;
+
+template <class KeyType, class DataType>
+struct LockFreeLinkedListBlock {
+  bool mark;
+  LockFreeLinkedListNode<KeyType, DataType> *next;
+};
+
+/*Start of temporary Talk class that will be deleted*/
 class Talk {
    public: 
 
@@ -18,23 +31,15 @@ class Talk {
      private_val = 1;
    }
 
-   void set(unsigned i);
+   void set(unsigned i, std::array<int, 3> arr);
 
    private:  
     int private_val;
     static int static_private_val;
+    
 };
+/*End of temporary Talk class that will be deleted*/
 
-typedef uintptr_t TagType;
-
-template <class KeyType, class DataType>
-class LockFreeLinkedListNode;
-
-template <class KeyType, class DataType>
-struct LockFreeLinkedListBlock {
-  bool mark;
-  LockFreeLinkedListNode<KeyType, DataType> *next;
-};
 
 
 template <class KeyType, class DataType>
@@ -108,6 +113,10 @@ class LockFreeLinkedListNode {
 template <class KeyType, class DataType>
 class LockFreeLinkedListWorker {
   public:
+
+    // Initialize hp0, hp1, hp2 from HP set
+    //void set(unsigned id, std::array<LockFreeLinkedListNode<KeyType, DataType>*, HP_LEN>);
+
     /** Linked List operations **/
     // if key does not exists, inserts node in undefined order (will switch to a sorted order) and returns true
     // else returns false
@@ -143,6 +152,9 @@ class LockFreeLinkedListWorker {
 //**************************************//
 //******* CLASS IMPLEMENTATIONS ********//
 //**************************************//
+
+
+
 
 // Linked List Implementation
 template <class KeyType, class DataType>
