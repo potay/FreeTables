@@ -63,7 +63,7 @@ class GlobalLockLinkedListWorker {
   public:
     // Constructors
     GlobalLockLinkedListWorker();
-
+    
     /** Linked List operations **/
     // if key does not exists, inserts node in undefined order (will switch to a sorted order) and returns true
     // else returns false

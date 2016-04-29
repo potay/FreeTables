@@ -115,7 +115,10 @@ class LockFreeLinkedListWorker {
   public:
 
     // Initialize hp0, hp1, hp2 from HP set
-    //void set(unsigned id, std::array<LockFreeLinkedListNode<KeyType, DataType>*, HP_LEN>);
+    void set(unsigned i, std::array< LockFreeLinkedListNode<KeyType,DataType>*, 3> arr);
+    //void set(unsigned i, LockFreeLinkedListNode<KeyType,DataType>* arr[]);
+    //void set(unsigned i, std::array<int, 3> arr);
+    //void temp();
 
     /** Linked List operations **/
     // if key does not exists, inserts node in undefined order (will switch to a sorted order) and returns true
@@ -143,7 +146,6 @@ class LockFreeLinkedListWorker {
     static LockFreeLinkedListNode<KeyType, DataType> **hp1;
     static LockFreeLinkedListNode<KeyType, DataType> **hp2;
 
-
     bool find(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key);
 };
 ;
@@ -154,7 +156,20 @@ class LockFreeLinkedListWorker {
 //**************************************//
 
 
+// template <class KeyType, class DataType>
+// void set(unsigned i, LockFreeLinkedListNode<KeyType, DataType>* arr[]){
+//    ;
+// }
 
+// template <class KeyType, class DataType>
+// void set(unsigned i, std::array<int, 3> arr){
+//   ;
+// }
+
+// template <class KeyType, class DataType>
+// void temp(){
+//   ;
+// }
 
 // Linked List Implementation
 template <class KeyType, class DataType>

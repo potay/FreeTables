@@ -24,8 +24,10 @@
 #include "work_queue/work_queue.h"
 #include "cycle_timer/cycle_timer.h"
 
+#define HAZARD_POINTERS_LEN 3
 #define MAX_WORKERS 1
 #define NDEBUG
+
 
 // Define the Key and Data type of the Linked-list here.
 typedef int KeyType;
@@ -34,19 +36,59 @@ typedef GlobalLockLinkedListWorker<KeyType, DataType> StandardLinkedListWorker;
 typedef GlobalLockLinkedListHeader<KeyType, DataType> StandardLinkedListHead;
 typedef LockFreeLinkedListWorker<KeyType, DataType> LinkedListWorker;
 typedef LockFreeLinkedListAtomicBlock<KeyType, DataType> LinkedListHead;
+typedef LockFreeLinkedListNode<KeyType, DataType> Node;
 typedef Talk Talk_to_worker;
 
+//Create an array of hazard pointers
+std::array< Node*, HAZARD_POINTERS_LEN> HP{{NULL, NULL, NULL}};
+
+//Node* HP[] = {NULL, NULL, NULL};
 //Initialize static private variable
 int Talk::static_private_val  = 0;
 
 
+//Random integer array to pass in
+std::array<int, 3> arr1{ {100, 100, 100} };;
+
 void Talk::test_print(){
-   std::cout << "Testing" << Talk::static_private_val << "\n";
+   std::cout << "Testing " << Talk::static_private_val << "\n";
 }
 
-void Talk::set(unsigned i){
-   //std::cout << "Testing" << Talk::static_private_val << "\n";
-   Talk::static_private_val = i;
+// void Talk::set(unsigned i, std::array<int, 3> arr){
+//    //std::cout << "Testing" << Talk::static_private_val << "\n";
+//    Talk::static_private_val = arr[1]+i;
+
+// }
+
+// template <class KeyType, class DataType>
+// void LockFreeLinkedListWorker<KeyType, DataType>::temp(){
+//    ;
+//    std::cout << "Why does this work?? So strange\n";
+
+// }
+
+
+
+//Initializing the static private
+//Explicit specialization of template needed. Not sure
+//what it means but I cannot use typedef here
+template <class KeyType, class DataType>
+LockFreeLinkedListNode <KeyType, DataType>** LockFreeLinkedListWorker<KeyType, DataType>::hp0 = NULL;
+
+template <class KeyType, class DataType>
+LockFreeLinkedListNode <KeyType, DataType>** LockFreeLinkedListWorker<KeyType, DataType>::hp1 = NULL;
+
+template <class KeyType, class DataType>
+LockFreeLinkedListNode <KeyType, DataType>** LockFreeLinkedListWorker<KeyType, DataType>::hp2 = NULL;
+
+
+//Cannot have this function in lock_free_linked_list.h. Doenst compile.
+//Says undefined funtion error. Dont know why
+template <class KeyType, class DataType>
+void LockFreeLinkedListWorker<KeyType, DataType>::set(unsigned i, std::array< LockFreeLinkedListNode<KeyType,DataType>*, 3> arr){
+   LockFreeLinkedListWorker<KeyType, DataType>::hp0 = &arr[3*0];
+   LockFreeLinkedListWorker<KeyType, DataType>::hp1 = &arr[3*0+ 1];
+   LockFreeLinkedListWorker<KeyType, DataType>::hp2 = &arr[3*0+ 2];
 }
 
 
@@ -182,12 +224,14 @@ template <class Head, class Worker>
 void worker_start(unsigned id, Head *head, WorkQueue<std::string> *work_queue, bool *done, Barrier *worker_barrier, bool *result) {
   DLOG(INFO) << "Instantiated worker " << id;
   Worker ll;
+  ll.set(id, HP);
+  //ll.temp();
   bool has_work;
   std::string testline;
-  Talk_to_worker temp;
-  temp.public_val = 10;
-  temp.set(id);
-  temp.test_print();
+  // Talk_to_worker temp;
+  // temp.public_val = 10;
+  // temp.set(id, arr1);
+  // temp.test_print();
 
 
   while (1) {
@@ -281,8 +325,8 @@ int main(int argc, char *argv[]) {
 
   google::ParseCommandLineFlags(&argc, &argv, true);
 
-  double standard_time = run_linkedlist_tests<StandardLinkedListHead, StandardLinkedListWorker>(FLAGS_testfile);
-  std::cout << "STANDARD: " << standard_time << std::endl;
+  //double standard_time = run_linkedlist_tests<StandardLinkedListHead, StandardLinkedListWorker>(FLAGS_testfile);
+  //std::cout << "STANDARD: " << standard_time << std::endl;
   double new_time = run_linkedlist_tests<LinkedListHead, LinkedListWorker>(FLAGS_testfile);
   std::cout << "MEASURED: " << new_time << std::endl;
 
