@@ -5,6 +5,25 @@
 
 #include <atomic>
 #include <sstream>
+#include <iostream>
+class Talk {
+   public: 
+
+   int public_val;
+
+   void test_print();
+
+   Talk() {
+     private_val = 1;
+   }
+
+   private:  
+    int private_val;
+    static int static_private_val;
+
+};
+
+
 
 typedef uintptr_t TagType;
 
@@ -60,6 +79,7 @@ class LockFreeLinkedListAtomicBlock {
     };
     std::atomic<LockFreeLinkedListInternalBlock> block;
 
+
     inline LockFreeLinkedListInternalBlock block_to_internal(const LockFreeLinkedListBlock<KeyType, DataType>& b) {
       LockFreeLinkedListInternalBlock new_block = {(b.mark ? ((uintptr_t)(b.next) | (uintptr_t)1) : ((uintptr_t)(b.next) & (~(uintptr_t)1)))};
       return new_block;
@@ -109,6 +129,11 @@ class LockFreeLinkedListWorker {
     LockFreeLinkedListAtomicBlock<KeyType, DataType> *prev;
     LockFreeLinkedListAtomicBlock<KeyType, DataType> pmark_cur_ptag;
     LockFreeLinkedListAtomicBlock<KeyType, DataType> cmark_next_ctag;
+
+    static LockFreeLinkedListNode<KeyType, DataType> **hp0;
+    static LockFreeLinkedListNode<KeyType, DataType> **hp1;
+    static LockFreeLinkedListNode<KeyType, DataType> **hp2;
+
 
     bool find(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key);
 };

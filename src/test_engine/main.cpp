@@ -18,11 +18,13 @@
 
 #include "text_color/text_color.h"
 #include "global_lock_ll/global_lock_linked_list.h"
-#include "lock_free_ll/lock_free_linked_list.h"
+//#include "lock_free_ll/lock_free_linked_list.h"
+#include  "lock_free_ll/lock_free_linked_list.cpp"
+
 #include "work_queue/work_queue.h"
 #include "cycle_timer/cycle_timer.h"
 
-#define MAX_WORKERS 48
+#define MAX_WORKERS 1
 #define NDEBUG
 
 // Define the Key and Data type of the Linked-list here.
@@ -32,6 +34,7 @@ typedef GlobalLockLinkedListWorker<KeyType, DataType> StandardLinkedListWorker;
 typedef GlobalLockLinkedListHeader<KeyType, DataType> StandardLinkedListHead;
 typedef LockFreeLinkedListWorker<KeyType, DataType> LinkedListWorker;
 typedef LockFreeLinkedListAtomicBlock<KeyType, DataType> LinkedListHead;
+typedef Talk Talk_to_worker;
 
 DEFINE_string(testfile, "tests/hello.txt", "Test file to run.");
 DEFINE_bool(debug_print_list, false, "Print a visualization of the linked-list after each test line for debugging purposes.");
@@ -165,6 +168,11 @@ void worker_start(unsigned id, Head *head, WorkQueue<std::string> *work_queue, b
   Worker ll;
   bool has_work;
   std::string testline;
+  Talk_to_worker temp;
+  temp.public_val = 10;
+  temp.test_print();
+
+
   while (1) {
     has_work = work_queue->check_and_get_work(testline);
     if (has_work) {
