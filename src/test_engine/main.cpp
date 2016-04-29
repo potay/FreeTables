@@ -18,8 +18,8 @@
 
 #include "text_color/text_color.h"
 #include "global_lock_ll/global_lock_linked_list.h"
-//#include "lock_free_ll/lock_free_linked_list.h"
-#include  "lock_free_ll/lock_free_linked_list.cpp"
+#include "lock_free_ll/lock_free_linked_list.h"
+//#include  "lock_free_ll/lock_free_linked_list.cpp"
 
 #include "work_queue/work_queue.h"
 #include "cycle_timer/cycle_timer.h"
@@ -35,6 +35,22 @@ typedef GlobalLockLinkedListHeader<KeyType, DataType> StandardLinkedListHead;
 typedef LockFreeLinkedListWorker<KeyType, DataType> LinkedListWorker;
 typedef LockFreeLinkedListAtomicBlock<KeyType, DataType> LinkedListHead;
 typedef Talk Talk_to_worker;
+
+//Initialize static private variable
+int Talk::static_private_val  = 0;
+
+
+void Talk::test_print(){
+   std::cout << "Testing" << Talk::static_private_val << "\n";
+}
+
+void Talk::set(unsigned i){
+   //std::cout << "Testing" << Talk::static_private_val << "\n";
+   Talk::static_private_val = i;
+}
+
+
+
 
 DEFINE_string(testfile, "tests/hello.txt", "Test file to run.");
 DEFINE_bool(debug_print_list, false, "Print a visualization of the linked-list after each test line for debugging purposes.");
@@ -170,6 +186,7 @@ void worker_start(unsigned id, Head *head, WorkQueue<std::string> *work_queue, b
   std::string testline;
   Talk_to_worker temp;
   temp.public_val = 10;
+  temp.set(id);
   temp.test_print();
 
 

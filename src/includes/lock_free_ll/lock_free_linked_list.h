@@ -6,6 +6,7 @@
 #include <atomic>
 #include <sstream>
 #include <iostream>
+
 class Talk {
    public: 
 
@@ -17,13 +18,12 @@ class Talk {
      private_val = 1;
    }
 
+   void set(unsigned i);
+
    private:  
     int private_val;
     static int static_private_val;
-
 };
-
-
 
 typedef uintptr_t TagType;
 
