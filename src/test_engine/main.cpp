@@ -24,8 +24,8 @@
 #include "work_queue/work_queue.h"
 #include "cycle_timer/cycle_timer.h"
 
-#define HAZARD_POINTERS_LEN 3
-#define MAX_WORKERS 1
+#define NUM_HP_PER_THREAD 3
+#define MAX_THREADS 8
 #define NDEBUG
 
 
@@ -37,39 +37,39 @@ typedef GlobalLockLinkedListHeader<KeyType, DataType> StandardLinkedListHead;
 typedef LockFreeLinkedListWorker<KeyType, DataType> LinkedListWorker;
 typedef LockFreeLinkedListAtomicBlock<KeyType, DataType> LinkedListHead;
 typedef LockFreeLinkedListNode<KeyType, DataType> Node;
-typedef Talk Talk_to_worker;
+// typedef Talk Talk_to_worker;
 
 //Create an array of hazard pointers
-std::array< Node*, HAZARD_POINTERS_LEN> HP{{NULL, NULL, NULL}};
+std::array< Node*, NUM_HP_PER_THREAD*MAX_THREADS> HP;
 
 //Node* HP[] = {NULL, NULL, NULL};
 //Initialize static private variable
-int Talk::static_private_val  = 0;
+// int Talk::static_private_val  = 0;
 
 
-//Random integer array to pass in
-std::array<int, 3> arr1{ {100, 100, 100} };;
+// //Random integer array to pass in
+// std::array<int, 3> arr1{ {100, 100, 100} };;
 
-void Talk::test_print(){
-   std::cout << "Testing " << Talk::static_private_val << "\n";
-}
-
-// void Talk::set(unsigned i, std::array<int, 3> arr){
-//    //std::cout << "Testing" << Talk::static_private_val << "\n";
-//    Talk::static_private_val = arr[1]+i;
-
+// void Talk::test_print(){
+//    std::cout << "Testing " << Talk::static_private_val << "\n";
 // }
 
-// template <class KeyType, class DataType>
-// void LockFreeLinkedListWorker<KeyType, DataType>::temp(){
-//    ;
-//    std::cout << "Why does this work?? So strange\n";
+// // void Talk::set(unsigned i, std::array<int, 3> arr){
+// //    //std::cout << "Testing" << Talk::static_private_val << "\n";
+// //    Talk::static_private_val = arr[1]+i;
 
-// }
+// // }
+
+// // template <class KeyType, class DataType>
+// // void LockFreeLinkedListWorker<KeyType, DataType>::temp(){
+// //    ;
+// //    std::cout << "Why does this work?? So strange\n";
+
+// // }
 
 
 
-//Initializing the static private
+//Initializing the static private variabls
 //Explicit specialization of template needed. Not sure
 //what it means but I cannot use typedef here
 template <class KeyType, class DataType>
@@ -85,13 +85,18 @@ LockFreeLinkedListNode <KeyType, DataType>** LockFreeLinkedListWorker<KeyType, D
 //Cannot have this function in lock_free_linked_list.h. Doenst compile.
 //Says undefined funtion error. Dont know why
 template <class KeyType, class DataType>
-void LockFreeLinkedListWorker<KeyType, DataType>::set(unsigned i, std::array< LockFreeLinkedListNode<KeyType,DataType>*, 3> arr){
-   LockFreeLinkedListWorker<KeyType, DataType>::hp0 = &arr[3*0];
-   LockFreeLinkedListWorker<KeyType, DataType>::hp1 = &arr[3*0+ 1];
-   LockFreeLinkedListWorker<KeyType, DataType>::hp2 = &arr[3*0+ 2];
+void LockFreeLinkedListWorker<KeyType, DataType>::set(unsigned i, std::array< LockFreeLinkedListNode<KeyType,DataType>*, NUM_HP_PER_THREAD*MAX_THREADS> arr){
+   LockFreeLinkedListWorker<KeyType, DataType>::hp0 = &arr[3*i];
+   LockFreeLinkedListWorker<KeyType, DataType>::hp1 = &arr[3*i+ 1];
+   LockFreeLinkedListWorker<KeyType, DataType>::hp2 = &arr[3*i+ 2];
+
+   //Pointer addresses are not at uniform intervals as one would expect.
+   // std::cout << "Thread id :" << i << ":" << "hp0 :" << hp0 << "\n";
+   // std::cout << "Thread id :" << i << ":" << "hp1 :" << hp1 << "\n";
+   // std::cout << "Thread id :" << i << ":" << "hp2 :" << hp2 << "\n";
+   //std::cout << "Values of the array" << arr[0] << "\n"; 
+
 }
-
-
 
 
 DEFINE_string(testfile, "tests/hello.txt", "Test file to run.");
@@ -307,6 +312,7 @@ double run_linkedlist_tests(std::string testfile) {
   DLOG_IF(INFO, all_test_success) << color_green("All tests ran successfully!");
   DLOG_IF(INFO, !all_test_success) << color_red("Some tests failed!");
 
+  std::cout << "all_test_success : " << all_test_success << "\n";
   return (end_time - start_time);
 }
 

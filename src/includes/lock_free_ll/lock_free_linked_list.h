@@ -7,7 +7,8 @@
 #include <sstream>
 #include <iostream>
 
-#define HP_LEN 3;
+#define NUM_HP_PER_THREAD 3
+#define MAX_THREADS 8
 typedef uintptr_t TagType;
 
 template <class KeyType, class DataType>
@@ -20,25 +21,26 @@ struct LockFreeLinkedListBlock {
 };
 
 /*Start of temporary Talk class that will be deleted*/
-class Talk {
-   public: 
+// class Talk {
+//    public: 
 
-   int public_val;
+//    int public_val;
 
-   void test_print();
+//    void test_print();
 
-   Talk() {
-     private_val = 1;
-   }
+//    Talk() {
+//      private_val = 1;
+//    }
 
-   void set(unsigned i, std::array<int, 3> arr);
+//    //Cannot replace with constan
+//    void set(unsigned i, std::array<int, 3> arr);
 
-   private:  
-    int private_val;
-    static int static_private_val;
+//    private:  
+//     int private_val;
+//     static int static_private_val;
     
-};
-/*End of temporary Talk class that will be deleted*/
+// };
+// /*End of temporary Talk class that will be deleted*/
 
 
 
@@ -115,7 +117,7 @@ class LockFreeLinkedListWorker {
   public:
 
     // Initialize hp0, hp1, hp2 from HP set
-    void set(unsigned i, std::array< LockFreeLinkedListNode<KeyType,DataType>*, 3> arr);
+    void set(unsigned i, std::array< LockFreeLinkedListNode<KeyType,DataType>*, NUM_HP_PER_THREAD*MAX_THREADS> arr);
     //void set(unsigned i, LockFreeLinkedListNode<KeyType,DataType>* arr[]);
     //void set(unsigned i, std::array<int, 3> arr);
     //void temp();
@@ -175,24 +177,38 @@ class LockFreeLinkedListWorker {
 template <class KeyType, class DataType>
 bool LockFreeLinkedListWorker<KeyType, DataType>::insert(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key, DataType data) {
   LockFreeLinkedListNode<KeyType, DataType> *node = new LockFreeLinkedListNode<KeyType, DataType>(key, data);
+  bool result = false;
   while (true) {
     if (find(head, key)) {
       delete node;
-      return false;
+      result = false;
+      break;
     }
     LockFreeLinkedListBlock<KeyType, DataType> temp = pmark_cur_ptag.load();
     node->mark_next_tag.store(false, temp.next);
 
     LockFreeLinkedListBlock<KeyType, DataType> expected = {false, temp.next};
     LockFreeLinkedListBlock<KeyType, DataType> value = {false, node};
-    if (prev->compare_exchange_weak(expected, value)) return true;
+    if (prev->compare_exchange_weak(expected, value)) {
+      result = true;
+      break;
+    }
+      
   }
+  *(LockFreeLinkedListWorker<KeyType, DataType>::hp0) = NULL;
+  *(LockFreeLinkedListWorker<KeyType, DataType>::hp1) = NULL;
+  *(LockFreeLinkedListWorker<KeyType, DataType>::hp2) = NULL;
+  return result;
 }
 
 template <class KeyType, class DataType>
 bool LockFreeLinkedListWorker<KeyType, DataType>::remove(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key) {
+  bool result = false;
   while (true) {
-    if (!find(head, key)) return false;
+    if (!find(head, key)) {
+      result = false;
+      break;
+    }
     
     LockFreeLinkedListBlock<KeyType, DataType> curr_temp = pmark_cur_ptag.load();
     LockFreeLinkedListBlock<KeyType, DataType> next_temp = cmark_next_ctag.load();
@@ -206,23 +222,30 @@ bool LockFreeLinkedListWorker<KeyType, DataType>::remove(LockFreeLinkedListAtomi
     curr_temp = pmark_cur_ptag.load();
     next_temp = cmark_next_ctag.load();
     expected = {false, curr_temp.next}; 
-    value = {false, next_temp.next};
+    value =    {false, next_temp.next};
     if (prev->compare_exchange_weak(expected, value)) {
       // DeleteNode(curr_temp.next);
-      delete curr_temp.next;
-      (void)0;
- 
+      delete curr_temp.next; 
     } else {
       find(head, key);
     }
-
-    return true;
+    result = true;
+    break;
   }
+  *(LockFreeLinkedListWorker<KeyType, DataType>::hp0) = NULL;
+  *(LockFreeLinkedListWorker<KeyType, DataType>::hp1) = NULL;
+  *(LockFreeLinkedListWorker<KeyType, DataType>::hp2) = NULL;
+  return result;
 }
 
 template <class KeyType, class DataType>
 bool LockFreeLinkedListWorker<KeyType, DataType>::search(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key) {
-  return find(head, key);
+  bool result = false;
+  result = find(head, key);
+  *(LockFreeLinkedListWorker<KeyType, DataType>::hp0) = NULL;
+  *(LockFreeLinkedListWorker<KeyType, DataType>::hp1) = NULL;
+  *(LockFreeLinkedListWorker<KeyType, DataType>::hp2) = NULL;
+  return result;
 }
 
 template <class KeyType, class DataType>
@@ -231,8 +254,18 @@ bool LockFreeLinkedListWorker<KeyType, DataType>::find(LockFreeLinkedListAtomicB
 try_again:
 
   prev = head;
-  prev->load();
-  pmark_cur_ptag.store(prev->load());
+  pmark_cur_ptag.store(prev->load());  
+  
+
+  //*hp1 <- curr
+  LockFreeLinkedListBlock<KeyType, DataType> temp1 = pmark_cur_ptag.load();
+  LockFreeLinkedListNode<KeyType, DataType> *curr_node_ptr1 = temp1.next;
+  *(LockFreeLinkedListWorker<KeyType, DataType>::hp1) = curr_node_ptr1;
+
+  //*prev != <0, curr>
+  LockFreeLinkedListBlock<KeyType, DataType> curr_blk = {false, curr_node_ptr1};
+  if(prev->load() != curr_blk) goto try_again;
+  
   while (true) {
 
     if (pmark_cur_ptag.load().next == NULL) return false;
@@ -240,10 +273,17 @@ try_again:
     LockFreeLinkedListBlock<KeyType, DataType> temp = pmark_cur_ptag.load();
     LockFreeLinkedListNode<KeyType, DataType> *curr_node_ptr = temp.next;
     LockFreeLinkedListAtomicBlock<KeyType, DataType> *curr_node_atomic_block_ptr = &(curr_node_ptr->mark_next_tag);
-    LockFreeLinkedListBlock<KeyType, DataType> curr_node_atomic_block = (*curr_node_atomic_block_ptr).load();
-    cmark_next_ctag.store(curr_node_atomic_block);
+    LockFreeLinkedListBlock<KeyType, DataType> curr_node_block = (*curr_node_atomic_block_ptr).load();
+    cmark_next_ctag.store(curr_node_block);
+
+
+    //*hp0 <- next
+    *(LockFreeLinkedListWorker<KeyType, DataType>::hp0) = cmark_next_ctag.load().next;
+
+    //if(curr^.<Mark, Next> != <cmark, next>)
+    if(  (((pmark_cur_ptag.load().next)->mark_next_tag).load())  != curr_node_block)goto try_again;
+
     KeyType ckey = pmark_cur_ptag.load().next->key;
-    
     temp = pmark_cur_ptag.load();
     LockFreeLinkedListBlock<KeyType, DataType> test = {false, temp.next}; 
     if (prev->load() != test) goto try_again;
@@ -251,6 +291,10 @@ try_again:
     if (!pmark_cur_ptag.load().mark) {
       if (ckey >= key) return ckey == key;
       prev = &(pmark_cur_ptag.load().next->mark_next_tag);
+
+      //*hp2 <- curr
+      *(LockFreeLinkedListWorker<KeyType, DataType>::hp2) = pmark_cur_ptag.load().next;
+
     } else {
       temp = pmark_cur_ptag.load();
       LockFreeLinkedListBlock<KeyType, DataType> next_temp = cmark_next_ctag.load();
@@ -267,7 +311,11 @@ try_again:
       }
     }
     pmark_cur_ptag.store(cmark_next_ctag.load());
+
+    //*hp1 <- next;
+    *(LockFreeLinkedListWorker<KeyType, DataType>::hp1) = cmark_next_ctag.load().next;
   }
+
 }
 
 template <class KeyType, class DataType>
