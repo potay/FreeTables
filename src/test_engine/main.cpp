@@ -26,6 +26,7 @@
 
 #define NUM_HP_PER_THREAD 3
 #define MAX_THREADS 8
+#define BATCH 2*MAX_THREADS*NUM_HP_PER_THREAD
 #define NDEBUG
 
 
@@ -81,6 +82,11 @@ LockFreeLinkedListNode <KeyType, DataType>** LockFreeLinkedListWorker<KeyType, D
 template <class KeyType, class DataType>
 LockFreeLinkedListNode <KeyType, DataType>** LockFreeLinkedListWorker<KeyType, DataType>::hp2 = NULL;
 
+template <class KeyType, class DataType>
+int LockFreeLinkedListWorker<KeyType, DataType>::dcount = 0;
+
+template < class KeyType,  class DataType>
+std::array <LockFreeLinkedListNode<KeyType, DataType>*, BATCH> LockFreeLinkedListWorker<KeyType, DataType>::dlist;
 
 //Cannot have this function in lock_free_linked_list.h. Doenst compile.
 //Says undefined funtion error. Dont know why
@@ -89,13 +95,22 @@ void LockFreeLinkedListWorker<KeyType, DataType>::set(unsigned i, std::array< Lo
    LockFreeLinkedListWorker<KeyType, DataType>::hp0 = &arr[3*i];
    LockFreeLinkedListWorker<KeyType, DataType>::hp1 = &arr[3*i+ 1];
    LockFreeLinkedListWorker<KeyType, DataType>::hp2 = &arr[3*i+ 2];
-
+   //LockFreeLinkedListWorker<KeyType, DataType>::dcount = 0;
    //Pointer addresses are not at uniform intervals as one would expect.
    // std::cout << "Thread id :" << i << ":" << "hp0 :" << hp0 << "\n";
    // std::cout << "Thread id :" << i << ":" << "hp1 :" << hp1 << "\n";
    // std::cout << "Thread id :" << i << ":" << "hp2 :" << hp2 << "\n";
    //std::cout << "Values of the array" << arr[0] << "\n"; 
 
+}
+
+template <class KeyType, class DataType>
+void LockFreeLinkedListWorker<KeyType, DataType>::DeleteNode(LockFreeLinkedListNode<KeyType, DataType>* node){
+  
+  std::cout << "Printing from DeleteNode \n";
+  std::cout << "dcount : " << LockFreeLinkedListWorker<KeyType, DataType>::dcount << "\n";
+  std::cout << "dlist[0] :"<< LockFreeLinkedListWorker<KeyType, DataType>::dlist[0] << "\n";
+  (void) node;
 }
 
 
