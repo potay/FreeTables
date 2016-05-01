@@ -32,7 +32,7 @@
 #define MAX_THREADS 8
 #define R 2*MAX_THREADS*NUM_HP_PER_THREAD
 #define N MAX_THREADS*NUM_HP_PER_THREAD
-#define NDEBUG
+//#define NDEBUG
 
 
 // Define the Key and Data type of the Linked-list here.
@@ -112,7 +112,7 @@ void LockFreeLinkedListWorker<KeyType, DataType>::set(unsigned i, std::array< Lo
 template <class KeyType, class DataType>
 void LockFreeLinkedListWorker<KeyType, DataType>::Scan(){
   
-  std::cout << "Entering Scan...\n";
+  DLOG(INFO) << "Entering Scan...\n";
   int p = 0;
   int new_dcount = 0;
   LockFreeLinkedListNode<KeyType, DataType>* hptr;
@@ -127,14 +127,14 @@ void LockFreeLinkedListWorker<KeyType, DataType>::Scan(){
     }
   }
 
-  std::cout << "Stage 1 complete\n";
+  DLOG(INFO) << "Stage 1 complete\n";
 
   //Stage 2 sort stage
   std::sort(plist.begin(), plist.end());
 
-  std::cout << "Stage 2 complete\n";
+  DLOG(INFO) << "Stage 2 complete\n";
 
-  std::cout << "Is the first element found " << std::binary_search(plist.begin(), plist.end(), dlist[0]) << "\n";
+  DLOG(INFO) << "Is the first element found " << std::binary_search(plist.begin(), plist.end(), dlist[0]) << "\n";
 
   //Stage 3
   for(int i = 0; i < R -1; i++){
@@ -147,7 +147,7 @@ void LockFreeLinkedListWorker<KeyType, DataType>::Scan(){
     }
   }
 
-  std::cout << "Stage 3 complete\n";
+  DLOG(INFO) << "Stage 3 complete\n";
 
   //Stage 4 sort
   for(int i = 0; i < new_dcount-1; i++){
@@ -155,7 +155,7 @@ void LockFreeLinkedListWorker<KeyType, DataType>::Scan(){
   }
   dcount = new_dcount;
 
-  std::cout << "Stage 4 complete \n";
+  DLOG(INFO) << "Stage 4 complete \n";
 
   (void)p;
   (void)new_dcount;
@@ -168,11 +168,11 @@ void LockFreeLinkedListWorker<KeyType, DataType>::Scan(){
 template <class KeyType, class DataType>
 void LockFreeLinkedListWorker<KeyType, DataType>::DeleteNode(LockFreeLinkedListNode<KeyType, DataType>* node){
   
-  std::cout << "Printing from DeleteNode \n";
-  std::cout << "dcount : " << LockFreeLinkedListWorker<KeyType, DataType>::dcount << "\n";
-  std::cout << "dlist[0] :"<< LockFreeLinkedListWorker<KeyType, DataType>::dlist[0] << "\n";
+  DLOG(INFO) << "Printing from DeleteNode \n";
+  DLOG(INFO) << "dcount : " << LockFreeLinkedListWorker<KeyType, DataType>::dcount << "\n";
+  DLOG(INFO)<< "dlist[0] :"<< LockFreeLinkedListWorker<KeyType, DataType>::dlist[0] << "\n";
   LockFreeLinkedListWorker<KeyType, DataType>::dlist[LockFreeLinkedListWorker<KeyType, DataType>::dcount++] = node;
-  std::cout << "dlist[0] :"<< LockFreeLinkedListWorker<KeyType, DataType>::dlist[0] << "\n"; 
+  DLOG(INFO) << "dlist[0] :"<< LockFreeLinkedListWorker<KeyType, DataType>::dlist[0] << "\n"; 
     
   if(dcount == R){
     Scan();
@@ -396,13 +396,13 @@ double run_linkedlist_tests(std::string testfile) {
   DLOG_IF(INFO, all_test_success) << color_green("All tests ran successfully!");
   DLOG_IF(INFO, !all_test_success) << color_red("Some tests failed!");
 
-  std::cout << "all_test_success : " << all_test_success << "\n";
+  DLOG(INFO) << "all_test_success : " << all_test_success << "\n";
   return (end_time - start_time);
 }
 
 
 int main(int argc, char *argv[]) {
-  // FLAGS_logtostderr = 1;
+  FLAGS_logtostderr = 1;
   // FLAGS_log_dir = "logs";
 
   std::string usage("Usage: " + std::string(argv[0]) +
@@ -412,7 +412,6 @@ int main(int argc, char *argv[]) {
   google::SetUsageMessage(usage);
   google::InitGoogleLogging(argv[0]);
   google::InstallFailureSignalHandler();
-
   google::ParseCommandLineFlags(&argc, &argv, true);
 
 
