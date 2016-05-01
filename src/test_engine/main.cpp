@@ -30,7 +30,7 @@
 
 #define NUM_HP_PER_THREAD 3
 #define MAX_THREADS 8
-#define BATCH 2*MAX_THREADS*NUM_HP_PER_THREAD
+#define R 2*MAX_THREADS*NUM_HP_PER_THREAD
 #define N MAX_THREADS*NUM_HP_PER_THREAD
 #define NDEBUG
 
@@ -91,7 +91,7 @@ template <class KeyType, class DataType>
 int LockFreeLinkedListWorker<KeyType, DataType>::dcount = 0;
 
 template < class KeyType,  class DataType>
-std::array <LockFreeLinkedListNode<KeyType, DataType>*, BATCH> LockFreeLinkedListWorker<KeyType, DataType>::dlist;
+std::array <LockFreeLinkedListNode<KeyType, DataType>*, R> LockFreeLinkedListWorker<KeyType, DataType>::dlist;
 
 //Cannot have this function in lock_free_linked_list.h. Doenst compile.
 //Says undefined funtion error. Dont know why
@@ -112,6 +112,7 @@ void LockFreeLinkedListWorker<KeyType, DataType>::set(unsigned i, std::array< Lo
 template <class KeyType, class DataType>
 void LockFreeLinkedListWorker<KeyType, DataType>::Scan(){
   
+  std::cout << "Entering Scan...\n";
   int p = 0;
   int new_dcount = 0;
   LockFreeLinkedListNode<KeyType, DataType>* hptr;
@@ -126,24 +127,35 @@ void LockFreeLinkedListWorker<KeyType, DataType>::Scan(){
     }
   }
 
+  std::cout << "Stage 1 complete\n";
+
   //Stage 2 sort stage
   std::sort(plist.begin(), plist.end());
 
+  std::cout << "Stage 2 complete\n";
+
+  std::cout << "Is the first element found " << std::binary_search(plist.begin(), plist.end(), dlist[0]) << "\n";
+
   //Stage 3
-  for(int i = 0; i < BATCH-1; i++){
+  for(int i = 0; i < R -1; i++){
     if(std::binary_search(plist.begin(), plist.end(), dlist[i])){
       new_dlist[new_dcount++] = dlist[i];
     }
     else{
+      std::cout << "Deleting it instead\n";
       delete dlist[i];
     }
   }
+
+  std::cout << "Stage 3 complete\n";
 
   //Stage 4 sort
   for(int i = 0; i < new_dcount-1; i++){
     dlist[i] = new_dlist[i];
   }
   dcount = new_dcount;
+
+  std::cout << "Stage 4 complete \n";
 
   (void)p;
   (void)new_dcount;
@@ -162,7 +174,7 @@ void LockFreeLinkedListWorker<KeyType, DataType>::DeleteNode(LockFreeLinkedListN
   LockFreeLinkedListWorker<KeyType, DataType>::dlist[LockFreeLinkedListWorker<KeyType, DataType>::dcount++] = node;
   std::cout << "dlist[0] :"<< LockFreeLinkedListWorker<KeyType, DataType>::dlist[0] << "\n"; 
     
-  if(dcount == BATCH){
+  if(dcount == R){
     Scan();
   }
 
