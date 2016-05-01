@@ -24,9 +24,14 @@
 #include "work_queue/work_queue.h"
 #include "cycle_timer/cycle_timer.h"
 
+#include <array>
+#include <algorithm>
+
+
 #define NUM_HP_PER_THREAD 3
 #define MAX_THREADS 8
 #define BATCH 2*MAX_THREADS*NUM_HP_PER_THREAD
+#define N MAX_THREADS*NUM_HP_PER_THREAD
 #define NDEBUG
 
 
@@ -105,12 +110,62 @@ void LockFreeLinkedListWorker<KeyType, DataType>::set(unsigned i, std::array< Lo
 }
 
 template <class KeyType, class DataType>
+void LockFreeLinkedListWorker<KeyType, DataType>::Scan(){
+  
+  int p = 0;
+  int new_dcount = 0;
+  LockFreeLinkedListNode<KeyType, DataType>* hptr;
+  std::array<Node*, N> plist;
+  std::array<Node*, N> new_dlist;
+
+
+  //Stage 1
+  for(int i = 0; i < N-1; i++){
+    if( (hptr = HP[i])!= NULL ){
+      plist[p++] = hptr;
+    }
+  }
+
+  //Stage 2 sort stage
+  std::sort(plist.begin(), plist.end());
+
+  //Stage 3
+  for(int i = 0; i < BATCH-1; i++){
+    if(std::binary_search(plist.begin(), plist.end(), dlist[i])){
+      new_dlist[new_dcount++] = dlist[i];
+    }
+    else{
+      delete dlist[i];
+    }
+  }
+
+  //Stage 4 sort
+  for(int i = 0; i < new_dcount-1; i++){
+    dlist[i] = new_dlist[i];
+  }
+  dcount = new_dcount;
+
+  (void)p;
+  (void)new_dcount;
+  (void)hptr;
+  (void)plist;
+  (void)new_dlist;
+
+}
+
+template <class KeyType, class DataType>
 void LockFreeLinkedListWorker<KeyType, DataType>::DeleteNode(LockFreeLinkedListNode<KeyType, DataType>* node){
   
   std::cout << "Printing from DeleteNode \n";
   std::cout << "dcount : " << LockFreeLinkedListWorker<KeyType, DataType>::dcount << "\n";
   std::cout << "dlist[0] :"<< LockFreeLinkedListWorker<KeyType, DataType>::dlist[0] << "\n";
-  (void) node;
+  LockFreeLinkedListWorker<KeyType, DataType>::dlist[LockFreeLinkedListWorker<KeyType, DataType>::dcount++] = node;
+  std::cout << "dlist[0] :"<< LockFreeLinkedListWorker<KeyType, DataType>::dlist[0] << "\n"; 
+    
+  if(dcount == BATCH){
+    Scan();
+  }
+
 }
 
 
@@ -247,6 +302,8 @@ void worker_start(unsigned id, Head *head, WorkQueue<std::string> *work_queue, b
   ll.set(id, HP);
   //ll.temp();
   bool has_work;
+
+
   std::string testline;
   // Talk_to_worker temp;
   // temp.public_val = 10;
@@ -346,6 +403,18 @@ int main(int argc, char *argv[]) {
 
   google::ParseCommandLineFlags(&argc, &argv, true);
 
+
+  //Checking the HP array before and after sort.
+  //Before sort.
+  // std::cout << "Before sort\n";
+  // for(int i =0; i < N; i++){
+  //   std::cout << "Element :" << i << "Value :" << &HP[i] << "\n";  
+  // }
+  // std::sort(HP.begin(), HP.end());
+  // std::cout << "After sort\n";
+  // for(int i=0; i<N; i++){
+  //   std::cout << "Element :" << i << "Value :" << &HP[i] << "\n"; 
+  // }
   //double standard_time = run_linkedlist_tests<StandardLinkedListHead, StandardLinkedListWorker>(FLAGS_testfile);
   //std::cout << "STANDARD: " << standard_time << std::endl;
   double new_time = run_linkedlist_tests<LinkedListHead, LinkedListWorker>(FLAGS_testfile);

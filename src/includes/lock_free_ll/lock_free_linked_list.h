@@ -139,6 +139,8 @@ class LockFreeLinkedListWorker {
     //Delete(Node). Implementation of Delete(Node) with SMR
     void DeleteNode(LockFreeLinkedListNode<KeyType, DataType>* node);
 
+    void Scan();
+
     // Returns a visual of whatever it can get of ll. Note that if this is not done with thread syncing, will produce funny stuff.
     std::string visual(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head);
 
@@ -317,8 +319,7 @@ try_again:
       LockFreeLinkedListBlock<KeyType, DataType> expected = {false, temp.next}; 
       LockFreeLinkedListBlock<KeyType, DataType> value = {false, next_temp.next}; 
       if (prev->compare_exchange_weak(expected, value)) {
-        // DeleteNode(temp.next);
-        delete temp.next;
+        DeleteNode(temp.next);
         temp = pmark_cur_ptag.load();
         next_temp = cmark_next_ctag.load();
         cmark_next_ctag.store(next_temp.mark, next_temp.next);
