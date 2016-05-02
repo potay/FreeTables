@@ -8,7 +8,7 @@
 #include <iostream>
 
 #define NUM_HP_PER_THREAD 3
-#define MAX_THREADS 8
+#define MAX_THREADS 4
 #define NUM_HP  NUM_HP_PER_THREAD*MAX_THREADS
 #define BATCH_SIZE 2*NUM_HP
 
@@ -22,29 +22,6 @@ struct LockFreeLinkedListBlock {
   bool mark;
   LockFreeLinkedListNode<KeyType, DataType> *next;
 };
-
-/*Start of temporary Talk class that will be deleted*/
-// class Talk {
-//    public: 
-
-//    int public_val;
-
-//    void test_print();
-
-//    Talk() {
-//      private_val = 1;
-//    }
-
-//    //Cannot replace with constan
-//    void set(unsigned i, std::array<int, 3> arr);
-
-//    private:  
-//     int private_val;
-//     static int static_private_val;
-    
-// };
-// /*End of temporary Talk class that will be deleted*/
-
 
 
 template <class KeyType, class DataType>
@@ -319,7 +296,8 @@ try_again:
       LockFreeLinkedListBlock<KeyType, DataType> expected = {false, temp.next}; 
       LockFreeLinkedListBlock<KeyType, DataType> value = {false, next_temp.next}; 
       if (prev->compare_exchange_weak(expected, value)) {
-        DeleteNode(temp.next);
+         DeleteNode(temp.next);
+        //delete temp.next;
         temp = pmark_cur_ptag.load();
         next_temp = cmark_next_ctag.load();
         cmark_next_ctag.store(next_temp.mark, next_temp.next);

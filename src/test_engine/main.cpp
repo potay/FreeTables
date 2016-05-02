@@ -29,7 +29,7 @@
 
 
 #define NUM_HP_PER_THREAD 3
-#define MAX_THREADS 8
+#define MAX_THREADS 4
 #define R 2*MAX_THREADS*NUM_HP_PER_THREAD
 #define N MAX_THREADS*NUM_HP_PER_THREAD
 //#define NDEBUG
@@ -43,37 +43,9 @@ typedef GlobalLockLinkedListHeader<KeyType, DataType> StandardLinkedListHead;
 typedef LockFreeLinkedListWorker<KeyType, DataType> LinkedListWorker;
 typedef LockFreeLinkedListAtomicBlock<KeyType, DataType> LinkedListHead;
 typedef LockFreeLinkedListNode<KeyType, DataType> Node;
-// typedef Talk Talk_to_worker;
 
 //Create an array of hazard pointers
 std::array< Node*, NUM_HP_PER_THREAD*MAX_THREADS> HP;
-
-//Node* HP[] = {NULL, NULL, NULL};
-//Initialize static private variable
-// int Talk::static_private_val  = 0;
-
-
-// //Random integer array to pass in
-// std::array<int, 3> arr1{ {100, 100, 100} };;
-
-// void Talk::test_print(){
-//    std::cout << "Testing " << Talk::static_private_val << "\n";
-// }
-
-// // void Talk::set(unsigned i, std::array<int, 3> arr){
-// //    //std::cout << "Testing" << Talk::static_private_val << "\n";
-// //    Talk::static_private_val = arr[1]+i;
-
-// // }
-
-// // template <class KeyType, class DataType>
-// // void LockFreeLinkedListWorker<KeyType, DataType>::temp(){
-// //    ;
-// //    std::cout << "Why does this work?? So strange\n";
-
-// // }
-
-
 
 //Initializing the static private variabls
 //Explicit specialization of template needed. Not sure
@@ -121,8 +93,9 @@ void LockFreeLinkedListWorker<KeyType, DataType>::Scan(){
 
 
   //Stage 1
-  for(int i = 0; i < N-1; i++){
+  for(int i = 0; i < N; i++){
     if( (hptr = HP[i])!= NULL ){
+      DLOG(INFO) << "This thread is holding a hazard pointer \n";
       plist[p++] = hptr;
     }
   }
@@ -134,15 +107,16 @@ void LockFreeLinkedListWorker<KeyType, DataType>::Scan(){
 
   DLOG(INFO) << "Stage 2 complete\n";
 
-  DLOG(INFO) << "Is the first element found " << std::binary_search(plist.begin(), plist.end(), dlist[0]) << "\n";
+  //DLOG(INFO) << "Is the first element found " << std::binary_search(plist.begin(), plist.end(), dlist[0]) << "\n";
 
   //Stage 3
   for(int i = 0; i < R -1; i++){
     if(std::binary_search(plist.begin(), plist.end(), dlist[i])){
+      DLOG(INFO) << "Something was found\n ";
       new_dlist[new_dcount++] = dlist[i];
     }
     else{
-      std::cout << "Deleting it instead\n";
+      DLOG(INFO) << "Deleting element instead: "<<dlist[i]<<"\n";
       delete dlist[i];
     }
   }
@@ -157,12 +131,6 @@ void LockFreeLinkedListWorker<KeyType, DataType>::Scan(){
 
   DLOG(INFO) << "Stage 4 complete \n";
 
-  (void)p;
-  (void)new_dcount;
-  (void)hptr;
-  (void)plist;
-  (void)new_dlist;
-
 }
 
 template <class KeyType, class DataType>
@@ -170,13 +138,16 @@ void LockFreeLinkedListWorker<KeyType, DataType>::DeleteNode(LockFreeLinkedListN
   
   DLOG(INFO) << "Printing from DeleteNode \n";
   DLOG(INFO) << "dcount : " << LockFreeLinkedListWorker<KeyType, DataType>::dcount << "\n";
-  DLOG(INFO)<< "dlist[0] :"<< LockFreeLinkedListWorker<KeyType, DataType>::dlist[0] << "\n";
+  //DLOG(INFO)<< "dlist[0] :"<< LockFreeLinkedListWorker<KeyType, DataType>::dlist[0] << "\n";
   LockFreeLinkedListWorker<KeyType, DataType>::dlist[LockFreeLinkedListWorker<KeyType, DataType>::dcount++] = node;
-  DLOG(INFO) << "dlist[0] :"<< LockFreeLinkedListWorker<KeyType, DataType>::dlist[0] << "\n"; 
-    
-  if(dcount == R){
+  //DLOG(INFO) << "dlist[0] :"<< LockFreeLinkedListWorker<KeyType, DataType>::dlist[0] << "\n"; 
+  
+  DLOG(INFO) << "Value of R " << R<< "\n";
+  if(dcount == R){  
+
+    DLOG(INFO) << "Am I calling scan\n";
     Scan();
-  }
+  }//if ends here
 
 }
 
@@ -224,7 +195,7 @@ bool process_testline(Head *head, std::vector<std::string> tokens, Worker &ll) {
 
   if (tokens.size() < 1) {
     DLOG(WARNING) << color_red("Invalid line.");
-    return false;
+    return true;
   }
 
   std::string cmd = tokens[0];
@@ -312,16 +283,9 @@ void worker_start(unsigned id, Head *head, WorkQueue<std::string> *work_queue, b
   DLOG(INFO) << "Instantiated worker " << id;
   Worker ll;
   ll.set(id, HP);
-  //ll.temp();
   bool has_work;
 
-
   std::string testline;
-  // Talk_to_worker temp;
-  // temp.public_val = 10;
-  // temp.set(id, arr1);
-  // temp.test_print();
-
 
   while (1) {
     has_work = work_queue->check_and_get_work(testline);
@@ -349,12 +313,12 @@ double run_linkedlist_tests(std::string testfile) {
   Head head;
   WorkQueue<std::string> work_queue;
   std::vector<std::thread> workers;
-  Barrier worker_barrier(std::thread::hardware_concurrency() + 1);
+  Barrier worker_barrier(MAX_THREADS + 1);
   bool done = false;
-  bool result[std::thread::hardware_concurrency()];
+  bool result[MAX_THREADS];
 
   // Initialize worker pool
-  for (unsigned i = 0; i < std::thread::hardware_concurrency(); ++i) {
+  for (unsigned i = 0; i < MAX_THREADS; ++i) {
     result[i] = true;
     workers.emplace_back(std::thread(worker_start<Head, Worker>, i, &head, &work_queue, &done, &worker_barrier, &result[i]));
   }
@@ -372,6 +336,8 @@ double run_linkedlist_tests(std::string testfile) {
 
   while (infile.good()) {
     getline(infile, testline);
+
+    //DLOG(INFO) << "Testline you are trying to test : " << testline << "\n";
     if (testline == "sync") {
       worker_barrier.activate();
       worker_barrier.wait();
@@ -389,7 +355,7 @@ double run_linkedlist_tests(std::string testfile) {
   double end_time = CycleTimer::currentSeconds();
 
   // Check results
-  for (unsigned i = 0; i < std::thread::hardware_concurrency(); ++i) {
+  for (unsigned i = 0; i < MAX_THREADS; ++i) {
     all_test_success &= result[i];
   }
 
