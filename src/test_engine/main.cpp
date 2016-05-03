@@ -123,6 +123,7 @@ void LockFreeLinkedListWorker<KeyType, DataType>::Scan(){
     if( (hptr = HP_Pointer[i])!= NULL ){
       DLOG(INFO) << "This thread is holding a hazard pointer \n";
       plist[p++] = hptr;
+       //HP_Pointer[i] = NULL;
     }
   }
   DLOG(INFO) << "Value of p :" << p << "\n";
@@ -205,7 +206,7 @@ void LockFreeLinkedListWorker<KeyType, DataType>::DeleteNode(LockFreeLinkedListN
 
 }
 
-DEFINE_string(testfile, "tests/hello.txt", "Test file to run.");
+DEFINE_string(testfile, "tests/hello5.txt", "Test file to run.");
 DEFINE_bool(debug_print_list, false, "Print a visualization of the linked-list after each test line for debugging purposes.");
 
 
@@ -431,7 +432,7 @@ double run_linkedlist_tests(std::string testfile) {
 
 
 int main(int argc, char *argv[]) {
-  //FLAGS_logtostderr = 1;
+  FLAGS_logtostderr = 1;
   // FLAGS_log_dir = "logs";
 
   std::string usage("Usage: " + std::string(argv[0]) +
