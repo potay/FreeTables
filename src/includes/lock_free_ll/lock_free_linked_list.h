@@ -16,7 +16,7 @@
 
 //Same as R from main.cpp. Have to adjust value in main.cpp as well if you wish
 //to tune paramenter
-#define BATCH_SIZE 2*NUM_HP //Same
+#define BATCH_SIZE 2*NUM_HP 
 
 typedef uintptr_t TagType;
 
@@ -104,11 +104,6 @@ class LockFreeLinkedListWorker {
 
 
     // Initialize hp0, hp1, hp2 from HP set
-    //void set(unsigned i, std::array< LockFreeLinkedListNode<KeyType,DataType>*, NUM_HP> arr);
-    //void set(unsigned i, LockFreeLinkedListNode<KeyType,DataType>* arr[]);
-    //void set(unsigned i, std::array<int, 3> arr);
-    //void temp();
-
     void set(unsigned i,  LockFreeLinkedListNode<KeyType, DataType>** arr);
 
     /** Linked List operations **/
@@ -156,22 +151,6 @@ class LockFreeLinkedListWorker {
 //**************************************//
 //******* CLASS IMPLEMENTATIONS ********//
 //**************************************//
-
-
-// template <class KeyType, class DataType>
-// void set(unsigned i, LockFreeLinkedListNode<KeyType, DataType>* arr[]){
-//    ;
-// }
-
-// template <class KeyType, class DataType>
-// void set(unsigned i, std::array<int, 3> arr){
-//   ;
-// }
-
-// template <class KeyType, class DataType>
-// void temp(){
-//   ;
-// }
 
 
 

@@ -30,8 +30,8 @@
 
 #define NUM_HP_PER_THREAD 3
 #define MAX_THREADS 4
-#define R 2*MAX_THREADS*NUM_HP_PER_THREAD
-#define N MAX_THREADS*NUM_HP_PER_THREAD
+#define R 2*MAX_THREADS*NUM_HP_PER_THREAD//R is BATCH SIZE
+#define N MAX_THREADS*NUM_HP_PER_THREAD //N is length of HP array
 //#define NDEBUG
 
 
@@ -43,9 +43,6 @@ typedef GlobalLockLinkedListHeader<KeyType, DataType> StandardLinkedListHead;
 typedef LockFreeLinkedListWorker<KeyType, DataType> LinkedListWorker;
 typedef LockFreeLinkedListAtomicBlock<KeyType, DataType> LinkedListHead;
 typedef LockFreeLinkedListNode<KeyType, DataType> Node;
-
-//Create an array of hazard pointers
-//std::array< Node*, NUM_HP_PER_THREAD*MAX_THREADS> HP;
 
 
 //Create another array of hazard pointers
@@ -70,97 +67,43 @@ template < class KeyType,  class DataType>
 std::array <LockFreeLinkedListNode<KeyType, DataType>*, R> LockFreeLinkedListWorker<KeyType, DataType>::dlist;
 
 
-// void print_HP(){
-
-//   std::cout << "Beginning a new print array style \n";
-
-//    for(int i = 0; i < N; i++){
-//     //if(HP[i]!=NULL){
-//       std::cout << "HP i :" << i << " HP[i]" << HP[i] << "\n";
-//     //}
-//    }
-// }
 
 void print_HP_Pointer_Style(){
-
   std::cout << "Beginning a new print Pointer Style \n";
-
   for(int i =0; i < N; i ++){
-
     std::cout << " HP i "<< i << " HP_Pointer[i] " << HP_Pointer[i] << " ";
-
     if(HP_Pointer[i]!=NULL){
       std::cout << "Key "<<HP_Pointer[i]->key << "Data "<< HP_Pointer[i]->data<<"\n";
     }
     else{
       std::cout << "\n";
     }
-
   }
 }
 
 void init_HP_Pointer(){
-
-  //HP_Pointer = (LockFreeLinkedListNode<KeyType, DataType>**)malloc(sizeof(LockFreeLinkedListNode<KeyType, DataType>*)*N);
-
   HP_Pointer = new LockFreeLinkedListNode<KeyType, DataType>*[N];
   for(int i = 0; i < N; i++){
     HP_Pointer[i] = NULL;
   }
-
 }
 
-//Cannot have this function in lock_free_linked_list.h. Doenst compile.
-//Says undefined funtion error. Dont know why
-// template <class KeyType, class DataType>
-// void LockFreeLinkedListWorker<KeyType, DataType>::set(unsigned i, std::array< LockFreeLinkedListNode<KeyType,DataType>*, NUM_HP_PER_THREAD*MAX_THREADS> arr){
-//    LockFreeLinkedListWorker<KeyType, DataType>::hp0 = &arr[3*i];
-//    LockFreeLinkedListWorker<KeyType, DataType>::hp1 = &arr[3*i+ 1];
-//    LockFreeLinkedListWorker<KeyType, DataType>::hp2 = &arr[3*i+ 2];
-
-//    //LockFreeLinkedListWorker<KeyType, DataType>::dcount = 0;
-//    //Pointer addresses are not at uniform intervals as one would expect.
-//    // std::cout << "Thread id :" << i << ":" << "hp0 :" << hp0 << "\n";
-//    // std::cout << "Thread id :" << i << ":" << "hp1 :" << hp1 << "\n";
-//    // std::cout << "Thread id :" << i << ":" << "hp2 :" << hp2 << "\n";
-//    // //std::cout << "Values of the array" << arr[0] << "\n"; 
-//    // LockFreeLinkedListNode<KeyType, DataType> *node = new LockFreeLinkedListNode<KeyType, DataType>(1000, "Dragon");
-//    // *(LockFreeLinkedListWorker<KeyType, DataType>::hp0) = node;
-   
-//    // std::cout << "Value of hp0 " << hp0 << "\n";
-//    // std::cout << "Value of &arr[3*i] with i = : " << i << " is " << &arr[3*i] << "\n";
-// }
+void free_HP_Pointer(){
+  for(int i = 0; i < N; i++){
+    if(HP_Pointer[i]!=NULL){
+      delete HP_Pointer[i];
+    }
+  }
+  delete HP_Pointer;
+}
 
 
 template <class KeyType, class DataType>
 void LockFreeLinkedListWorker<KeyType, DataType>::set(unsigned i, LockFreeLinkedListNode<KeyType, DataType>** arr){
   
-  std::cout << "Value of HP_Pointer before is :\n";
-  //print_HP_Pointer_Style();
-
   LockFreeLinkedListWorker<KeyType, DataType>::hp0 = &arr[3*i];
   LockFreeLinkedListWorker<KeyType, DataType>::hp1 = &arr[3*i+ 1];
   LockFreeLinkedListWorker<KeyType, DataType>::hp2 = &arr[3*i+ 2];
-
-
- // std::cout << "HP i " << HP[3*i] << "\n";
- // std::cout << "arr i" << &arr[3*i] << "\n";
-
-  // std::cout << "The sole culmination of my efforts\n";
-
-  // LockFreeLinkedListWorker<KeyType, DataType>::hp0 = &arr[3*i];
-  // LockFreeLinkedListNode<KeyType, DataType> *node = new LockFreeLinkedListNode<KeyType, DataType>(1000, "Pikachu");
-
-  // *(LockFreeLinkedListWorker<KeyType, DataType>::hp0) = node;
-  // std::cout << "Value of hp0 " << hp0 << "\n";
-  // std::cout << "Value of &arr[3*i] with i = :" << i << " is " << &arr[3*i] << "\n";
-  // std::cout << "Value of HP_Pointer is : " << HP_Pointer[3*i] << "\n";
-  // std::cout << "HP[3*i] Key "<< HP_Pointer[3*i]->key << "\n";
-  // std::cout << "HP[3*i] Data "<< HP_Pointer[3*i]->data<< "\n";
-  //ESTABLISHED THAT PASSING A POINTER ARRAY WORKS BY REFERENCE
-
-
-  //print_HP_Pointer_Style();
 }
 
 template <class KeyType, class DataType>
@@ -198,7 +141,6 @@ void LockFreeLinkedListWorker<KeyType, DataType>::Scan(){
   for(int i = 0; i < R ; i++){
     
 
-     //NOTHING EVER ENTERS THIS LOOP
     for(int j = 0; j < p; j ++){
 
       DLOG(INFO) << "i :" << i << "dlist[i] :" <<dlist[i]<< "j :" << j << "plist[j] :" <<plist[j] << "\n";
@@ -234,7 +176,6 @@ void LockFreeLinkedListWorker<KeyType, DataType>::Scan(){
   DLOG(INFO) << "Stage 3 complete\n";
 
   //Stage 4 
-  //NOTHING EVER ENTERS THIS LOOP EITHER
   DLOG(INFO) << "new_dcount :" << new_dcount;
   for(int i = 0; i < new_dcount; i++){
     DLOG(INFO) << "Am I entering the dcount loop \n";
@@ -261,8 +202,6 @@ void LockFreeLinkedListWorker<KeyType, DataType>::DeleteNode(LockFreeLinkedListN
     DLOG(INFO) << "Am I calling scan\n";
     Scan();
   }//if ends here
-
-
 
 }
 
@@ -408,7 +347,7 @@ void worker_start(unsigned id, Head *head, WorkQueue<std::string> *work_queue, b
 
   std::string testline;
 
-  std::cout << "Print something man..\n";
+  //std::cout << "Print something man..\n";
 
   while (1) {
     has_work = work_queue->check_and_get_work(testline);
@@ -521,6 +460,8 @@ int main(int argc, char *argv[]) {
   //std::cout << "STANDARD: " << standard_time << std::endl;
   double new_time = run_linkedlist_tests<LinkedListHead, LinkedListWorker>(FLAGS_testfile);
   std::cout << "MEASURED: " << new_time << std::endl;
+
+  free_HP_Pointer();
 
   return 0;
 }
