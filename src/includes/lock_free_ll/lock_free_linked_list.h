@@ -9,8 +9,14 @@
 
 #define NUM_HP_PER_THREAD 3
 #define MAX_THREADS 4
-#define NUM_HP  NUM_HP_PER_THREAD*MAX_THREADS
-#define BATCH_SIZE 2*NUM_HP
+
+//Same as N from main.cpp. Have to adjust value in main.cpp as well if you wish
+//to tune paramenter
+#define NUM_HP  NUM_HP_PER_THREAD*MAX_THREADS 
+
+//Same as R from main.cpp. Have to adjust value in main.cpp as well if you wish
+//to tune paramenter
+#define BATCH_SIZE 2*NUM_HP //Same
 
 typedef uintptr_t TagType;
 
@@ -98,10 +104,12 @@ class LockFreeLinkedListWorker {
 
 
     // Initialize hp0, hp1, hp2 from HP set
-    void set(unsigned i, std::array< LockFreeLinkedListNode<KeyType,DataType>*, NUM_HP> arr);
+    //void set(unsigned i, std::array< LockFreeLinkedListNode<KeyType,DataType>*, NUM_HP> arr);
     //void set(unsigned i, LockFreeLinkedListNode<KeyType,DataType>* arr[]);
     //void set(unsigned i, std::array<int, 3> arr);
     //void temp();
+
+    void set(unsigned i,  LockFreeLinkedListNode<KeyType, DataType>** arr);
 
     /** Linked List operations **/
     // if key does not exists, inserts node in undefined order (will switch to a sorted order) and returns true
@@ -112,10 +120,9 @@ class LockFreeLinkedListWorker {
     // Returns true if k is in list, else false
     bool search(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key);
 
-
     //Delete(Node). Implementation of Delete(Node) with SMR
     void DeleteNode(LockFreeLinkedListNode<KeyType, DataType>* node);
-
+    //Scans array and deletes nodes that are not pointed to by hazard pointers.
     void Scan();
 
     // Returns a visual of whatever it can get of ll. Note that if this is not done with thread syncing, will produce funny stuff.
@@ -220,7 +227,6 @@ bool LockFreeLinkedListWorker<KeyType, DataType>::remove(LockFreeLinkedListAtomi
     value =    {false, next_temp.next};
     if (prev->compare_exchange_weak(expected, value)) {
       DeleteNode(curr_temp.next);
-      //delete curr_temp.next; 
     } else {
       find(head, key);
     }
@@ -289,6 +295,8 @@ try_again:
 
       //*hp2 <- curr
       *(LockFreeLinkedListWorker<KeyType, DataType>::hp2) = pmark_cur_ptag.load().next;
+      // /DLOG(INFO) << "hp2 :" << hp2 << "\n";
+
 
     } else {
       temp = pmark_cur_ptag.load();
@@ -327,3 +335,6 @@ std::string LockFreeLinkedListWorker<KeyType, DataType>::visual(LockFreeLinkedLi
   ss << "->foot";
   return ss.str();
 }
+
+
+

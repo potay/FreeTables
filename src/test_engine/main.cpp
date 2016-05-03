@@ -45,7 +45,11 @@ typedef LockFreeLinkedListAtomicBlock<KeyType, DataType> LinkedListHead;
 typedef LockFreeLinkedListNode<KeyType, DataType> Node;
 
 //Create an array of hazard pointers
-std::array< Node*, NUM_HP_PER_THREAD*MAX_THREADS> HP;
+//std::array< Node*, NUM_HP_PER_THREAD*MAX_THREADS> HP;
+
+
+//Create another array of hazard pointers
+LockFreeLinkedListNode<KeyType, DataType>** HP_Pointer;
 
 //Initializing the static private variabls
 //Explicit specialization of template needed. Not sure
@@ -65,20 +69,98 @@ int LockFreeLinkedListWorker<KeyType, DataType>::dcount = 0;
 template < class KeyType,  class DataType>
 std::array <LockFreeLinkedListNode<KeyType, DataType>*, R> LockFreeLinkedListWorker<KeyType, DataType>::dlist;
 
+
+// void print_HP(){
+
+//   std::cout << "Beginning a new print array style \n";
+
+//    for(int i = 0; i < N; i++){
+//     //if(HP[i]!=NULL){
+//       std::cout << "HP i :" << i << " HP[i]" << HP[i] << "\n";
+//     //}
+//    }
+// }
+
+void print_HP_Pointer_Style(){
+
+  std::cout << "Beginning a new print Pointer Style \n";
+
+  for(int i =0; i < N; i ++){
+
+    std::cout << " HP i "<< i << " HP_Pointer[i] " << HP_Pointer[i] << " ";
+
+    if(HP_Pointer[i]!=NULL){
+      std::cout << "Key "<<HP_Pointer[i]->key << "Data "<< HP_Pointer[i]->data<<"\n";
+    }
+    else{
+      std::cout << "\n";
+    }
+
+  }
+}
+
+void init_HP_Pointer(){
+
+  //HP_Pointer = (LockFreeLinkedListNode<KeyType, DataType>**)malloc(sizeof(LockFreeLinkedListNode<KeyType, DataType>*)*N);
+
+  HP_Pointer = new LockFreeLinkedListNode<KeyType, DataType>*[N];
+  for(int i = 0; i < N; i++){
+    HP_Pointer[i] = NULL;
+  }
+
+}
+
 //Cannot have this function in lock_free_linked_list.h. Doenst compile.
 //Says undefined funtion error. Dont know why
-template <class KeyType, class DataType>
-void LockFreeLinkedListWorker<KeyType, DataType>::set(unsigned i, std::array< LockFreeLinkedListNode<KeyType,DataType>*, NUM_HP_PER_THREAD*MAX_THREADS> arr){
-   LockFreeLinkedListWorker<KeyType, DataType>::hp0 = &arr[3*i];
-   LockFreeLinkedListWorker<KeyType, DataType>::hp1 = &arr[3*i+ 1];
-   LockFreeLinkedListWorker<KeyType, DataType>::hp2 = &arr[3*i+ 2];
-   //LockFreeLinkedListWorker<KeyType, DataType>::dcount = 0;
-   //Pointer addresses are not at uniform intervals as one would expect.
-   // std::cout << "Thread id :" << i << ":" << "hp0 :" << hp0 << "\n";
-   // std::cout << "Thread id :" << i << ":" << "hp1 :" << hp1 << "\n";
-   // std::cout << "Thread id :" << i << ":" << "hp2 :" << hp2 << "\n";
-   //std::cout << "Values of the array" << arr[0] << "\n"; 
+// template <class KeyType, class DataType>
+// void LockFreeLinkedListWorker<KeyType, DataType>::set(unsigned i, std::array< LockFreeLinkedListNode<KeyType,DataType>*, NUM_HP_PER_THREAD*MAX_THREADS> arr){
+//    LockFreeLinkedListWorker<KeyType, DataType>::hp0 = &arr[3*i];
+//    LockFreeLinkedListWorker<KeyType, DataType>::hp1 = &arr[3*i+ 1];
+//    LockFreeLinkedListWorker<KeyType, DataType>::hp2 = &arr[3*i+ 2];
 
+//    //LockFreeLinkedListWorker<KeyType, DataType>::dcount = 0;
+//    //Pointer addresses are not at uniform intervals as one would expect.
+//    // std::cout << "Thread id :" << i << ":" << "hp0 :" << hp0 << "\n";
+//    // std::cout << "Thread id :" << i << ":" << "hp1 :" << hp1 << "\n";
+//    // std::cout << "Thread id :" << i << ":" << "hp2 :" << hp2 << "\n";
+//    // //std::cout << "Values of the array" << arr[0] << "\n"; 
+//    // LockFreeLinkedListNode<KeyType, DataType> *node = new LockFreeLinkedListNode<KeyType, DataType>(1000, "Dragon");
+//    // *(LockFreeLinkedListWorker<KeyType, DataType>::hp0) = node;
+   
+//    // std::cout << "Value of hp0 " << hp0 << "\n";
+//    // std::cout << "Value of &arr[3*i] with i = : " << i << " is " << &arr[3*i] << "\n";
+// }
+
+
+template <class KeyType, class DataType>
+void LockFreeLinkedListWorker<KeyType, DataType>::set(unsigned i, LockFreeLinkedListNode<KeyType, DataType>** arr){
+  
+  std::cout << "Value of HP_Pointer before is :\n";
+  //print_HP_Pointer_Style();
+
+  LockFreeLinkedListWorker<KeyType, DataType>::hp0 = &arr[3*i];
+  LockFreeLinkedListWorker<KeyType, DataType>::hp1 = &arr[3*i+ 1];
+  LockFreeLinkedListWorker<KeyType, DataType>::hp2 = &arr[3*i+ 2];
+
+
+ // std::cout << "HP i " << HP[3*i] << "\n";
+ // std::cout << "arr i" << &arr[3*i] << "\n";
+
+  // std::cout << "The sole culmination of my efforts\n";
+
+  // LockFreeLinkedListWorker<KeyType, DataType>::hp0 = &arr[3*i];
+  // LockFreeLinkedListNode<KeyType, DataType> *node = new LockFreeLinkedListNode<KeyType, DataType>(1000, "Pikachu");
+
+  // *(LockFreeLinkedListWorker<KeyType, DataType>::hp0) = node;
+  // std::cout << "Value of hp0 " << hp0 << "\n";
+  // std::cout << "Value of &arr[3*i] with i = :" << i << " is " << &arr[3*i] << "\n";
+  // std::cout << "Value of HP_Pointer is : " << HP_Pointer[3*i] << "\n";
+  // std::cout << "HP[3*i] Key "<< HP_Pointer[3*i]->key << "\n";
+  // std::cout << "HP[3*i] Data "<< HP_Pointer[3*i]->data<< "\n";
+  //ESTABLISHED THAT PASSING A POINTER ARRAY WORKS BY REFERENCE
+
+
+  //print_HP_Pointer_Style();
 }
 
 template <class KeyType, class DataType>
@@ -93,38 +175,69 @@ void LockFreeLinkedListWorker<KeyType, DataType>::Scan(){
 
 
   //Stage 1
+  //NOTHING EVER ENTERS THIS LOOP
   for(int i = 0; i < N; i++){
-    if( (hptr = HP[i])!= NULL ){
+    if( (hptr = HP_Pointer[i])!= NULL ){
       DLOG(INFO) << "This thread is holding a hazard pointer \n";
       plist[p++] = hptr;
     }
   }
+  DLOG(INFO) << "Value of p :" << p << "\n";
 
   DLOG(INFO) << "Stage 1 complete\n";
 
   //Stage 2 sort stage
-  std::sort(plist.begin(), plist.end());
+  //std::sort(plist.begin(), plist.end());
 
   DLOG(INFO) << "Stage 2 complete\n";
 
   //DLOG(INFO) << "Is the first element found " << std::binary_search(plist.begin(), plist.end(), dlist[0]) << "\n";
 
   //Stage 3
-  for(int i = 0; i < R -1; i++){
-    if(std::binary_search(plist.begin(), plist.end(), dlist[i])){
-      DLOG(INFO) << "Something was found\n ";
-      new_dlist[new_dcount++] = dlist[i];
+  int flag = 0;
+  for(int i = 0; i < R ; i++){
+    
+
+     //NOTHING EVER ENTERS THIS LOOP
+    for(int j = 0; j < p; j ++){
+
+      DLOG(INFO) << "i :" << i << "dlist[i] :" <<dlist[i]<< "j :" << j << "plist[j] :" <<plist[j] << "\n";
+      if(plist[j] == dlist[i]){
+        DLOG(INFO) << "Something was found case 2\n ";
+        new_dlist[new_dcount++] = dlist[i];
+        flag = 1;
+      }
     }
-    else{
-      DLOG(INFO) << "Deleting element instead: "<<dlist[i]<<"\n";
-      delete dlist[i];
+
+    if(flag == 0){
+      //This is where the problem is.
+      DLOG(INFO) << "So what am I trying to free " << dlist[i] << "\n";
+      if(dlist[i] != NULL){
+        delete dlist[i];//Probably trying to delete something that was
+        //already deleted. 
+      }
     }
+
+    flag = 0;
+
+    // if(std::binary_search(plist.begin(), plist.end(), dlist[i])){
+    //   DLOG(INFO) << "Something was found\n ";
+    //   new_dlist[new_dcount++] = dlist[i];
+    // }
+    // else{
+    //   DLOG(INFO) << "Deleting element instead: "<<dlist[i]<<"\n";
+    //   delete dlist[i];
+    // }
+
   }
 
   DLOG(INFO) << "Stage 3 complete\n";
 
-  //Stage 4 sort
-  for(int i = 0; i < new_dcount-1; i++){
+  //Stage 4 
+  //NOTHING EVER ENTERS THIS LOOP EITHER
+  DLOG(INFO) << "new_dcount :" << new_dcount;
+  for(int i = 0; i < new_dcount; i++){
+    DLOG(INFO) << "Am I entering the dcount loop \n";
     dlist[i] = new_dlist[i];
   }
   dcount = new_dcount;
@@ -149,8 +262,9 @@ void LockFreeLinkedListWorker<KeyType, DataType>::DeleteNode(LockFreeLinkedListN
     Scan();
   }//if ends here
 
-}
 
+
+}
 
 DEFINE_string(testfile, "tests/hello.txt", "Test file to run.");
 DEFINE_bool(debug_print_list, false, "Print a visualization of the linked-list after each test line for debugging purposes.");
@@ -208,7 +322,7 @@ bool process_testline(Head *head, std::vector<std::string> tokens, Worker &ll) {
     }
     k = std::stoi(tokens[1]);
     d = tokens[2];
-    DLOG(INFO) << "Inserting " << k << ":'" << d << "'...";
+    //DLOG(INFO) << "Inserting " << k << ":'" << d << "'...";
     if (!(ll.insert(head, k, d))) {
       DLOG(WARNING) << color_red("Unable to insert node. Possibly key(" + std::to_string(k) + ") already exists.");
       return false;
@@ -223,7 +337,7 @@ bool process_testline(Head *head, std::vector<std::string> tokens, Worker &ll) {
       return false;
     }
     k = std::stoi(tokens[1]);
-    DLOG(INFO) << "Searching by Key: " << k << "...";
+    //DLOG(INFO) << "Searching by Key: " << k << "...";
     bool expected = (std::stoi(tokens[2]) == 1) ? true : false;
     if (ll.search(head, k) == expected) {
       return true;
@@ -239,11 +353,12 @@ bool process_testline(Head *head, std::vector<std::string> tokens, Worker &ll) {
       return false;
     }
     k = std::stoi(tokens[1]);
-    DLOG(INFO) << "Removing node...";
+    DLOG(INFO) << "Removing node..." << std::to_string(k) << "\n";
     if (!(ll.remove(head, k))) {
       DLOG(WARNING) << color_red("Unable to remove node. Possibly key(" + std::to_string(k) + ") not found.");
       return false;
     } else {
+      //print_HP_Pointer_Style();
       return true;
     }
 
@@ -282,10 +397,18 @@ template <class Head, class Worker>
 void worker_start(unsigned id, Head *head, WorkQueue<std::string> *work_queue, bool *done, Barrier *worker_barrier, bool *result) {
   DLOG(INFO) << "Instantiated worker " << id;
   Worker ll;
-  ll.set(id, HP);
+  //ll.set(id, HP);
+  //std::cout << "Printing after set. Interested to see what happens here\n";
+  //print_HP();
+
+  ll.set(id, HP_Pointer);
+  //print_HP_Pointer_Style();
+
   bool has_work;
 
   std::string testline;
+
+  std::cout << "Print something man..\n";
 
   while (1) {
     has_work = work_queue->check_and_get_work(testline);
@@ -297,6 +420,7 @@ void worker_start(unsigned id, Head *head, WorkQueue<std::string> *work_queue, b
       worker_barrier->wait();
     }
   }
+  return;
 }
 
 
@@ -368,7 +492,7 @@ double run_linkedlist_tests(std::string testfile) {
 
 
 int main(int argc, char *argv[]) {
-  FLAGS_logtostderr = 1;
+  //FLAGS_logtostderr = 1;
   // FLAGS_log_dir = "logs";
 
   std::string usage("Usage: " + std::string(argv[0]) +
@@ -380,6 +504,7 @@ int main(int argc, char *argv[]) {
   google::InstallFailureSignalHandler();
   google::ParseCommandLineFlags(&argc, &argv, true);
 
+  init_HP_Pointer();
 
   //Checking the HP array before and after sort.
   //Before sort.
