@@ -8,7 +8,7 @@
 #include <iostream>
 
 #define NUM_HP_PER_THREAD 3
-#define MAX_THREADS 2
+#define MAX_THREADS 3
 
 //Same as N from main.cpp. Have to adjust value in main.cpp as well if you wish
 //to tune paramenter
@@ -108,16 +108,18 @@ class LockFreeLinkedListWorker {
     /** Linked List operations **/
     // if key does not exists, inserts node in undefined order (will switch to a sorted order) and returns true
     // else returns false
-    bool insert(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key, DataType data);
+    bool insert(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key, DataType data, unsigned id);
     // Returns true if node with key k was found and remove was successful, else false.
     bool remove(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key, unsigned id);
     // Returns true if k is in list, else false
-    bool search(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key);
+    bool search(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key, unsigned id);
 
     //Delete(Node). Implementation of Delete(Node) with SMR
     void DeleteNode(LockFreeLinkedListNode<KeyType, DataType>* node, unsigned id);
     //Scans array and deletes nodes that are not pointed to by hazard pointers.
-    void Scan();
+    void Scan(unsigned id);
+    //Deletes remnants from the dlist
+    void DeleteRemnants(unsigned id);
 
     // Returns a visual of whatever it can get of ll. Note that if this is not done with thread syncing, will produce funny stuff.
     std::string visual(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head);
@@ -163,7 +165,7 @@ class LockFreeLinkedListWorker {
     LockFreeLinkedListNode<KeyType, DataType>** dlist;
     LockFreeLinkedListNode<KeyType, DataType>** new_dlist;
 
-    bool find(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key);
+    bool find(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key, unsigned id);
 };
 
 
@@ -175,11 +177,11 @@ class LockFreeLinkedListWorker {
 
 // Linked List Implementation
 template <class KeyType, class DataType>
-bool LockFreeLinkedListWorker<KeyType, DataType>::insert(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key, DataType data) {
+bool LockFreeLinkedListWorker<KeyType, DataType>::insert(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key, DataType data, unsigned id) {
   LockFreeLinkedListNode<KeyType, DataType> *node = new LockFreeLinkedListNode<KeyType, DataType>(key, data);
   bool result = false;
   while (true) {
-    if (find(head, key)) {
+    if (find(head, key, id)) {
       delete node;
       result = false;
       break;
@@ -205,7 +207,7 @@ template <class KeyType, class DataType>
 bool LockFreeLinkedListWorker<KeyType, DataType>::remove(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key, unsigned id) {
   bool result = false;
   while (true) {
-    if (!find(head, key)) {
+    if (!find(head, key, id)) {
       result = false;
       break;
     }
@@ -226,7 +228,7 @@ bool LockFreeLinkedListWorker<KeyType, DataType>::remove(LockFreeLinkedListAtomi
     if (prev->compare_exchange_weak(expected, value)) {
       DeleteNode(curr_temp.next, id);
     } else {
-      find(head, key);
+      find(head, key, id);
     }
     result = true;
     break;
@@ -238,9 +240,9 @@ bool LockFreeLinkedListWorker<KeyType, DataType>::remove(LockFreeLinkedListAtomi
 }
 
 template <class KeyType, class DataType>
-bool LockFreeLinkedListWorker<KeyType, DataType>::search(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key) {
+bool LockFreeLinkedListWorker<KeyType, DataType>::search(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key, unsigned id) {
   bool result = false;
-  result = find(head, key);
+  result = find(head, key, id);
   *(hp0) = NULL;
   *(hp1) = NULL;
   *(hp2) = NULL;
@@ -248,7 +250,7 @@ bool LockFreeLinkedListWorker<KeyType, DataType>::search(LockFreeLinkedListAtomi
 }
 
 template <class KeyType, class DataType>
-bool LockFreeLinkedListWorker<KeyType, DataType>::find(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key) {
+bool LockFreeLinkedListWorker<KeyType, DataType>::find(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key, unsigned id) {
 
 try_again:
 
@@ -302,8 +304,7 @@ try_again:
       LockFreeLinkedListBlock<KeyType, DataType> expected = {false, temp.next}; 
       LockFreeLinkedListBlock<KeyType, DataType> value = {false, next_temp.next}; 
       if (prev->compare_exchange_weak(expected, value)) {
-         //DeleteNode(temp.next, id);
-         //DLOG(INFO) << "Does this ever get called \n";
+         DeleteNode(temp.next, id);
         //delete temp.next;
         temp = pmark_cur_ptag.load();
         next_temp = cmark_next_ctag.load();

@@ -29,7 +29,7 @@
 
 
 #define NUM_HP_PER_THREAD 3
-#define MAX_THREADS 2
+#define MAX_THREADS 3
 #define R 2*MAX_THREADS*NUM_HP_PER_THREAD//R is BATCH SIZE
 #define N MAX_THREADS*NUM_HP_PER_THREAD //N is length of HP array
 //#define NDEBUG
@@ -47,25 +47,6 @@ typedef LockFreeLinkedListNode<KeyType, DataType> Node;
 
 //Create another array of hazard pointers
 LockFreeLinkedListNode<KeyType, DataType>** HP_Pointer;
-
-//Initializing the static private variabls
-//Explicit specialization of template needed. Not sure
-//what it means but I cannot use typedef here
-// template <class KeyType, class DataType>
-// LockFreeLinkedListNode <KeyType, DataType>** LockFreeLinkedListWorker<KeyType, DataType>::hp0 = NULL;
-
-// template <class KeyType, class DataType>
-// LockFreeLinkedListNode <KeyType, DataType>** LockFreeLinkedListWorker<KeyType, DataType>::hp1 = NULL;
-
-// template <class KeyType, class DataType>
-// LockFreeLinkedListNode <KeyType, DataType>** LockFreeLinkedListWorker<KeyType, DataType>::hp2 = NULL;
-
-// template <class KeyType, class DataType>
-// int LockFreeLinkedListWorker<KeyType, DataType>::dcount = 0;
-
-// template < class KeyType,  class DataType>
-// std::array <LockFreeLinkedListNode<KeyType, DataType>*, R> LockFreeLinkedListWorker<KeyType, DataType>::dlist;
-
 
 
 void print_HP_Pointer_Style(){
@@ -107,14 +88,27 @@ void LockFreeLinkedListWorker<KeyType, DataType>::set(unsigned i, LockFreeLinked
 }
 
 template <class KeyType, class DataType>
-void LockFreeLinkedListWorker<KeyType, DataType>::Scan(){
+void LockFreeLinkedListWorker<KeyType, DataType>::Scan(unsigned id){
+
+
+  DLOG(INFO) << "Printing the hazard pointer array before entering find \n";
+  for(int i = 0; i < N; i++){
+    DLOG(INFO) << " HP_Pointer array " << HP_Pointer[i] << "\n";
+
+    if(HP_Pointer[i] != NULL){
+      DLOG(INFO) << "HP_Pointer array val "<< HP_Pointer[i]->key << ":" << HP_Pointer[i]->data << "\n\n";
+    }
+    
+  }
   
   int new_dlist_count  = 0;
   int del_flag = 0;
   for(int i = 0; i < R; i ++){
     for(int j = 0; j < N; j++){
       if((dlist[i] == HP_Pointer[j]) && (HP_Pointer[j] != NULL)){
-        new_dlist[new_dlist_count++] = dlist[i];
+        DLOG(INFO) << "We got ourselves a hazard pointer here thread :" << id << "\n";
+        DLOG(INFO) << "Value is :" << dlist[i] << "at index j :" << j << "\n";
+        new_dlist[new_dlist_count++] = dlist[i]; 
         del_flag = 1;
         break;
       }
@@ -125,9 +119,16 @@ void LockFreeLinkedListWorker<KeyType, DataType>::Scan(){
     del_flag = 0;
   }
 
+  //Clearing dlist[i]
   for(int i = 0; i < R; i++){
     dlist[i] = NULL;
   }
+
+  DLOG(INFO) << "The new_dlist from thread :" << id << "\n";
+  for(int i = 0; i < new_dlist_count; i++){
+    DLOG(INFO) << "newdlist i: " << i << " is :" << new_dlist[i] << " thread :" << id << "\n";
+  }
+
 
   for(int i = 0; i < new_dlist_count; i++){
       dlist[i] = new_dlist[i];
@@ -136,93 +137,25 @@ void LockFreeLinkedListWorker<KeyType, DataType>::Scan(){
 
   dcount = new_dlist_count;
 
+  DLOG(INFO) << "After calling scan dlist is from thread :" << id << "\n";
+  for(int i = 0; i < R; i++){
+    DLOG(INFO) << "dlist i: " << i << " is :" << dlist[i] << " thread :" << id << "\n";
+  }
 
-
-
-  // DLOG(INFO) << "Entering Scan...\n";
-  // int p = 0;
-  // int new_dcount = 0;
-  // LockFreeLinkedListNode<KeyType, DataType>* hptr;
-  // std::array<Node*, N> plist;
-  // std::array<Node*, N> new_dlist;
-
-
-  // //Stage 1
-  // //NOTHING EVER ENTERS THIS LOOP
-  // for(int i = 0; i < N; i++){
-  //   if( (hptr = HP_Pointer[i])!= NULL ){
-  //     DLOG(INFO) << "This thread is holding a hazard pointer \n";
-  //     plist[p++] = hptr;
-  //     //HP_Pointer[i] = NULL;
-  //   }
-  // }
-  // DLOG(INFO) << "Value of p :" << p << "\n";
-
-  // DLOG(INFO) << "Stage 1 complete\n";
-
-  // //Stage 2 sort stage
-  // //std::sort(plist.begin(), plist.end());
-
-  // DLOG(INFO) << "Stage 2 complete\n";
-
-  // //DLOG(INFO) << "Is the first element found " << std::binary_search(plist.begin(), plist.end(), dlist[0]) << "\n";
-
-  // //Stage 3
-  // int flag = 0;
-  // for(int i = 0; i < R ; i++){
-    
-
-  //   for(int j = 0; j < p; j ++){
-
-  //     DLOG(INFO) << "i :" << i << "dlist[i] :" <<dlist[i]<< "j :" << j << "plist[j] :" <<plist[j] << "\n";
-  //     if(plist[j] == dlist[i]){
-  //       DLOG(INFO) << "Something was found case 2\n ";
-  //       new_dlist[new_dcount++] = dlist[i];
-  //       flag = 1;
-  //     }
-  //   }
-
-  //   if(flag == 0){
-  //     //This is where the problem is.
-  //     DLOG(INFO) << "So what am I trying to free " << dlist[i] << "\n";
-  //     if(dlist[i] != NULL){
-  //       delete dlist[i];//Probably trying to delete something that was
-  //       //already deleted. 
-  //     }
-  //   }
-
-  //   flag = 0;
-
-  //   // if(std::binary_search(plist.begin(), plist.end(), dlist[i])){
-  //   //   DLOG(INFO) << "Something was found\n ";
-  //   //   new_dlist[new_dcount++] = dlist[i];
-  //   // }
-  //   // else{
-  //   //   DLOG(INFO) << "Deleting element instead: "<<dlist[i]<<"\n";
-  //   //   delete dlist[i];
-  //   // }
-
-  // }
-
-  // DLOG(INFO) << "Stage 3 complete\n";
-
-  // //Stage 4 
-  // DLOG(INFO) << "new_dcount :" << new_dcount;
-  // for(int i = 0; i < new_dcount; i++){
-  //   DLOG(INFO) << "Am I entering the dcount loop \n";
-  //   dlist[i] = new_dlist[i];
-  // }
-  // dcount = new_dcount;
-
-  // DLOG(INFO) << "Stage 4 complete \n";
+  DLOG(INFO) << "Value of new_dlist_count :"<< new_dlist_count << "\n";
+  DLOG(INFO) << "Value of dcount :" << dcount << "\n";
 
 }
+
+
+
 
 template <class KeyType, class DataType>
 void LockFreeLinkedListWorker<KeyType, DataType>::DeleteNode(LockFreeLinkedListNode<KeyType, DataType>* node, unsigned id){
   
 
-  DLOG(INFO) << "Printing dcount before ..  " << dcount << " \n";
+
+  DLOG(INFO) << "Printing dcount :" << dcount << " thread :" << id << " \n";
 
   //if(dcount < R){
     dlist[dcount++] = node;
@@ -230,58 +163,28 @@ void LockFreeLinkedListWorker<KeyType, DataType>::DeleteNode(LockFreeLinkedListN
 
   if(dcount == R){
     dcount = 0;
-    DLOG(INFO) << "Calling Scan...\n";
-    Scan();
+    DLOG(INFO) << "Before calling scan what is dlist from thread :"<< id << "\n";
+    for(int i = 0; i < R; i++){
+      DLOG(INFO) << "dlist i: " << i << " is :" << dlist[i] << " thread :" << id << "\n";
+    }
+
+    DLOG(INFO) << "Calling Scan from thread :" << id << "\n";
+    Scan(id);
   }
 
+}
 
-
-  // if(dcount < R){
-  //   dlist[dcount++] = node;
-  // }
-    
-  // else{
-
-  //    for(int i = 0; i < R; i++){
-
-  //     for(int j = 0; j < N; j++){
-  //       if(HP_Pointer[j]!= dlist[i]){
-
-  //       }
-  //     }
-  //     delete dlist[i];
-  //     dcount --;
-  //    }
-  // }
-
-  // testVar++;
-
-  // if(id == 0){
-  //   testVar+=5;
-  // }
-
-  // DLOG(INFO) << "testVar id is " << testVar << " id : " << id << "\n";
-
-
-  // DLOG(INFO) << "What are the values of the test variables. \n";
-
-  // DLOG(INFO) << "Printing from DeleteNode id is : " << id << "\n";
-  // DLOG(INFO) << "dcount before : " << LockFreeLinkedListWorker<KeyType, DataType>::dcount << " thread :"<< id<< "\n";
-  // DLOG(INFO)<< "dlist[0] :"<< LockFreeLinkedListWorker<KeyType, DataType>::dlist[0] << "\n";
-  // LockFreeLinkedListWorker<KeyType, DataType>::dlist[LockFreeLinkedListWorker<KeyType, DataType>::dcount++] = node;
-  // DLOG(INFO) << "dlist[0] :"<< LockFreeLinkedListWorker<KeyType, DataType>::dlist[0] << "\n"; 
-  // dcount ++;
-
-
-  //DLOG(INFO) << "dcount after: " << LockFreeLinkedListWorker<KeyType, DataType>::dcount << "\n";
-
-  // DLOG(INFO) << "Value of R " << R<< "\n";
-  // if(dcount >= R){  
-
-  //   DLOG(INFO) << "Am I calling scan\n";
-  //   Scan();
-  // }//if ends here
-
+//Goes through the dlist and just frees all the nodes.
+template <class KeyType, class DataType>
+void LockFreeLinkedListWorker<KeyType, DataType>::DeleteRemnants(unsigned id){
+   for(int i = 0; i < dcount; i ++){
+      if(dlist[i] != NULL){
+        delete dlist[i];
+      }
+   }
+   delete[] dlist;
+   delete[] new_dlist;
+   (void)id;
 }
 
 
@@ -343,7 +246,7 @@ bool process_testline(Head *head, std::vector<std::string> tokens, Worker &ll, u
     k = std::stoi(tokens[1]);
     d = tokens[2];
     //DLOG(INFO) << "Inserting " << k << ":'" << d << "'...";
-    if (!(ll.insert(head, k, d))) {
+    if (!(ll.insert(head, k, d, id))) {
       DLOG(WARNING) << color_red("Unable to insert node. Possibly key(" + std::to_string(k) + ") already exists.");
       return false;
     } else {
@@ -359,7 +262,7 @@ bool process_testline(Head *head, std::vector<std::string> tokens, Worker &ll, u
     k = std::stoi(tokens[1]);
     //DLOG(INFO) << "Searching by Key: " << k << "...";
     bool expected = (std::stoi(tokens[2]) == 1) ? true : false;
-    if (ll.search(head, k) == expected) {
+    if (ll.search(head, k, id) == expected) {
       return true;
     } else {
       DLOG(WARNING) << color_red("Did not match expected result for key(" + std::to_string(k) + ").");
@@ -440,6 +343,8 @@ void worker_start(unsigned id, Head *head, WorkQueue<std::string> *work_queue, b
       worker_barrier->wait();
     }
   }
+
+  //ll.DeleteRemnants(id);
   return;
 }
 
@@ -512,7 +417,7 @@ double run_linkedlist_tests(std::string testfile) {
 
 
 int main(int argc, char *argv[]) {
-  FLAGS_logtostderr = 1;
+  //FLAGS_logtostderr = 1;
   // FLAGS_log_dir = "logs";
 
   std::string usage("Usage: " + std::string(argv[0]) +
