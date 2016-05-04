@@ -65,15 +65,19 @@ void print_HP_Pointer_Style(){
 
 void init_HP_Pointer(){
 
-  HP_Pointer = (LockFreeLinkedListNode<KeyType, DataType>**)malloc(sizeof(LockFreeLinkedListNode<KeyType, DataType>*) * N);
+
+
+  HP_Pointer = new LockFreeLinkedListNode<KeyType, DataType>*[N];
   for(int i = 0; i < N; i++){
-    HP_Pointer[i] = NULL;
+    HP_Pointer[i] = 0;
   }
+
+
 }
 
 void free_HP_Pointer(){
   
-  free(HP_Pointer);
+  delete[] HP_Pointer;
 }
 
 
@@ -86,8 +90,9 @@ void LockFreeLinkedListWorker<KeyType, DataType>::set(unsigned i, LockFreeLinked
 }
 
 template <class KeyType, class DataType>
-void LockFreeLinkedListWorker<KeyType, DataType>::Scan(){
+void LockFreeLinkedListWorker<KeyType, DataType>::Scan(unsigned id){
   
+  (void) id;
   int new_dcount = 0;
   int flag = 0;
   for(int i = 0; i < R; i++){
@@ -100,7 +105,8 @@ void LockFreeLinkedListWorker<KeyType, DataType>::Scan(){
      }
      if(flag == 0){
         //Safe to delete
-        free(dlist[i]);
+        //std::cout << "Deleting from thread :" << id << "Key :" << dlist[i]->key << "Data :" << dlist[i]->data << "\n";
+        delete dlist[i];
      }
      flag = 0;
   }//loop ends here
@@ -128,7 +134,7 @@ void LockFreeLinkedListWorker<KeyType, DataType>::DeleteNode(LockFreeLinkedListN
   dlist[dcount++] = node;
 
   if(dcount == R){
-    Scan();
+    Scan(id);
   }
 
 }
@@ -191,7 +197,7 @@ bool process_testline(Head *head, std::vector<std::string> tokens, Worker &ll, u
     }
     k = std::stoi(tokens[1]);
     d = tokens[2];
-    if (!(ll.insert(head, k, d))) {
+    if (!(ll.insert(head, k, d, id))) {
       DLOG(WARNING) << color_red("Unable to insert node. Possibly key(" + std::to_string(k) + ") already exists.");
       return false;
     } else {
@@ -206,7 +212,7 @@ bool process_testline(Head *head, std::vector<std::string> tokens, Worker &ll, u
     }
     k = std::stoi(tokens[1]);
     bool expected = (std::stoi(tokens[2]) == 1) ? true : false;
-    if (ll.search(head, k) == expected) {
+    if (ll.search(head, k, id) == expected) {
       return true;
     } else {
       DLOG(WARNING) << color_red("Did not match expected result for key(" + std::to_string(k) + ").");
@@ -281,6 +287,8 @@ void worker_start(unsigned id, Head *head, WorkQueue<std::string> *work_queue, b
       worker_barrier->wait();
     }
   }
+
+  ll.print_dlist(id);
   return;
 }
 
