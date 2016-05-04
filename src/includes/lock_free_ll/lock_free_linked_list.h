@@ -8,7 +8,7 @@
 #include <iostream>
 
 #define NUM_HP_PER_THREAD 3
-#define MAX_THREADS 4
+#define MAX_THREADS 2
 
 //Same as N from main.cpp. Have to adjust value in main.cpp as well if you wish
 //to tune paramenter
@@ -105,18 +105,17 @@ class LockFreeLinkedListWorker {
 
     // Initialize hp0, hp1, hp2 from HP set
     void set(unsigned i,  LockFreeLinkedListNode<KeyType, DataType>** arr);
-
     /** Linked List operations **/
     // if key does not exists, inserts node in undefined order (will switch to a sorted order) and returns true
     // else returns false
     bool insert(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key, DataType data);
     // Returns true if node with key k was found and remove was successful, else false.
-    bool remove(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key);
+    bool remove(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key, unsigned id);
     // Returns true if k is in list, else false
     bool search(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key);
 
     //Delete(Node). Implementation of Delete(Node) with SMR
-    void DeleteNode(LockFreeLinkedListNode<KeyType, DataType>* node);
+    void DeleteNode(LockFreeLinkedListNode<KeyType, DataType>* node, unsigned id);
     //Scans array and deletes nodes that are not pointed to by hazard pointers.
     void Scan();
 
@@ -125,27 +124,47 @@ class LockFreeLinkedListWorker {
 
     LockFreeLinkedListWorker() {
       prev = NULL;
+      hp0 = NULL;
+      hp1 = NULL;
+      hp2 = NULL;
+      dcount = 0;
+
+      //dlist = (LockFreeLinkedListNode<KeyType, DataType>*)malloc (sizeof(LockFreeLinkedListNode<KeyType, DataType>)*NUM_HP) ;
+      dlist = new LockFreeLinkedListNode<KeyType, DataType>*[BATCH_SIZE];
+      for(int i = 0; i < BATCH_SIZE; i++){
+        dlist[i] = NULL;
+      }
+
+      new_dlist = new LockFreeLinkedListNode<KeyType, DataType>*[BATCH_SIZE];
+      for(int i = 0; i < BATCH_SIZE; i++){
+        new_dlist[i] = NULL;
+      }
+
+
     }
 
   private:
+
+    int testVar;
 
     // LockFreeLinkedListAtomicBlock<KeyType, DataType> head;
     LockFreeLinkedListAtomicBlock<KeyType, DataType> *prev;
     LockFreeLinkedListAtomicBlock<KeyType, DataType> pmark_cur_ptag;
     LockFreeLinkedListAtomicBlock<KeyType, DataType> cmark_next_ctag;
 
-    static LockFreeLinkedListNode<KeyType, DataType> **hp0;
-    static LockFreeLinkedListNode<KeyType, DataType> **hp1;
-    static LockFreeLinkedListNode<KeyType, DataType> **hp2;
+    LockFreeLinkedListNode<KeyType, DataType> **hp0;
+    LockFreeLinkedListNode<KeyType, DataType> **hp1;
+    LockFreeLinkedListNode<KeyType, DataType> **hp2;
 
     //Variables for HP deletion. According to cpp specs for default initialization,
     //dcount and dlist should be default initialized.
-    static int dcount;
-    static std::array <LockFreeLinkedListNode<KeyType, DataType>*, BATCH_SIZE> dlist;
+    int dcount;
+    //std::array <LockFreeLinkedListNode<KeyType, DataType>*, BATCH_SIZE> dlist;
+    LockFreeLinkedListNode<KeyType, DataType>** dlist;
+    LockFreeLinkedListNode<KeyType, DataType>** new_dlist;
 
     bool find(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key);
 };
-;
 
 
 //**************************************//
@@ -176,14 +195,14 @@ bool LockFreeLinkedListWorker<KeyType, DataType>::insert(LockFreeLinkedListAtomi
     }
       
   }
-  *(LockFreeLinkedListWorker<KeyType, DataType>::hp0) = NULL;
-  *(LockFreeLinkedListWorker<KeyType, DataType>::hp1) = NULL;
-  *(LockFreeLinkedListWorker<KeyType, DataType>::hp2) = NULL;
+  *(hp0) = NULL;
+  *(hp1) = NULL;
+  *(hp2) = NULL;
   return result;
 }
 
 template <class KeyType, class DataType>
-bool LockFreeLinkedListWorker<KeyType, DataType>::remove(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key) {
+bool LockFreeLinkedListWorker<KeyType, DataType>::remove(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key, unsigned id) {
   bool result = false;
   while (true) {
     if (!find(head, key)) {
@@ -205,16 +224,16 @@ bool LockFreeLinkedListWorker<KeyType, DataType>::remove(LockFreeLinkedListAtomi
     expected = {false, curr_temp.next}; 
     value =    {false, next_temp.next};
     if (prev->compare_exchange_weak(expected, value)) {
-      DeleteNode(curr_temp.next);
+      DeleteNode(curr_temp.next, id);
     } else {
       find(head, key);
     }
     result = true;
     break;
   }
-  *(LockFreeLinkedListWorker<KeyType, DataType>::hp0) = NULL;
-  *(LockFreeLinkedListWorker<KeyType, DataType>::hp1) = NULL;
-  *(LockFreeLinkedListWorker<KeyType, DataType>::hp2) = NULL;
+  *(hp0) = NULL;
+  *(hp1) = NULL;
+  *(hp2) = NULL;
   return result;
 }
 
@@ -222,9 +241,9 @@ template <class KeyType, class DataType>
 bool LockFreeLinkedListWorker<KeyType, DataType>::search(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key) {
   bool result = false;
   result = find(head, key);
-  *(LockFreeLinkedListWorker<KeyType, DataType>::hp0) = NULL;
-  *(LockFreeLinkedListWorker<KeyType, DataType>::hp1) = NULL;
-  *(LockFreeLinkedListWorker<KeyType, DataType>::hp2) = NULL;
+  *(hp0) = NULL;
+  *(hp1) = NULL;
+  *(hp2) = NULL;
   return result;
 }
 
@@ -240,7 +259,7 @@ try_again:
   //*hp1 <- curr
   LockFreeLinkedListBlock<KeyType, DataType> temp1 = pmark_cur_ptag.load();
   LockFreeLinkedListNode<KeyType, DataType> *curr_node_ptr1 = temp1.next;
-  *(LockFreeLinkedListWorker<KeyType, DataType>::hp1) = curr_node_ptr1;
+  *(hp1) = curr_node_ptr1;
 
   //*prev != <0, curr>
   LockFreeLinkedListBlock<KeyType, DataType> curr_blk = {false, curr_node_ptr1};
@@ -258,7 +277,7 @@ try_again:
 
 
     //*hp0 <- next
-    *(LockFreeLinkedListWorker<KeyType, DataType>::hp0) = cmark_next_ctag.load().next;
+    *(hp0) = cmark_next_ctag.load().next;
 
     //if(curr^.<Mark, Next> != <cmark, next>)
     if(  (((pmark_cur_ptag.load().next)->mark_next_tag).load())  != curr_node_block)goto try_again;
@@ -273,7 +292,7 @@ try_again:
       prev = &(pmark_cur_ptag.load().next->mark_next_tag);
 
       //*hp2 <- curr
-      *(LockFreeLinkedListWorker<KeyType, DataType>::hp2) = pmark_cur_ptag.load().next;
+      *(hp2) = pmark_cur_ptag.load().next;
       // /DLOG(INFO) << "hp2 :" << hp2 << "\n";
 
 
@@ -283,7 +302,8 @@ try_again:
       LockFreeLinkedListBlock<KeyType, DataType> expected = {false, temp.next}; 
       LockFreeLinkedListBlock<KeyType, DataType> value = {false, next_temp.next}; 
       if (prev->compare_exchange_weak(expected, value)) {
-         DeleteNode(temp.next);
+         //DeleteNode(temp.next, id);
+         //DLOG(INFO) << "Does this ever get called \n";
         //delete temp.next;
         temp = pmark_cur_ptag.load();
         next_temp = cmark_next_ctag.load();
@@ -295,7 +315,7 @@ try_again:
     pmark_cur_ptag.store(cmark_next_ctag.load());
 
     //*hp1 <- next;
-    *(LockFreeLinkedListWorker<KeyType, DataType>::hp1) = cmark_next_ctag.load().next;
+    *(hp1) = cmark_next_ctag.load().next;
   }
 
 }
@@ -314,6 +334,7 @@ std::string LockFreeLinkedListWorker<KeyType, DataType>::visual(LockFreeLinkedLi
   ss << "->foot";
   return ss.str();
 }
+
 
 
 
