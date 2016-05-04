@@ -29,7 +29,7 @@
 
 
 #define NUM_HP_PER_THREAD 3
-#define MAX_THREADS 3
+#define MAX_THREADS 2
 #define R 2*MAX_THREADS*NUM_HP_PER_THREAD//R is BATCH SIZE
 #define N MAX_THREADS*NUM_HP_PER_THREAD //N is length of HP array
 //#define NDEBUG
@@ -49,6 +49,7 @@ typedef LockFreeLinkedListNode<KeyType, DataType> Node;
 LockFreeLinkedListNode<KeyType, DataType>** HP_Pointer;
 
 
+
 void print_HP_Pointer_Style(){
   std::cout << "Beginning a new print Pointer Style \n";
   for(int i =0; i < N; i ++){
@@ -63,19 +64,16 @@ void print_HP_Pointer_Style(){
 }
 
 void init_HP_Pointer(){
-  HP_Pointer = new LockFreeLinkedListNode<KeyType, DataType>*[N];
+
+  HP_Pointer = (LockFreeLinkedListNode<KeyType, DataType>**)malloc(sizeof(LockFreeLinkedListNode<KeyType, DataType>*) * N);
   for(int i = 0; i < N; i++){
     HP_Pointer[i] = NULL;
   }
 }
 
 void free_HP_Pointer(){
-  for(int i = 0; i < N; i++){
-    if(HP_Pointer[i]!=NULL){
-      delete HP_Pointer[i];
-    }
-  }
-  delete[] HP_Pointer;
+  
+  free(HP_Pointer);
 }
 
 
@@ -88,103 +86,51 @@ void LockFreeLinkedListWorker<KeyType, DataType>::set(unsigned i, LockFreeLinked
 }
 
 template <class KeyType, class DataType>
-void LockFreeLinkedListWorker<KeyType, DataType>::Scan(unsigned id){
-
-
-  DLOG(INFO) << "Printing the hazard pointer array before entering find \n";
-  for(int i = 0; i < N; i++){
-    DLOG(INFO) << " HP_Pointer array " << HP_Pointer[i] << "\n";
-
-    if(HP_Pointer[i] != NULL){
-      DLOG(INFO) << "HP_Pointer array val "<< HP_Pointer[i]->key << ":" << HP_Pointer[i]->data << "\n\n";
-    }
-    
-  }
+void LockFreeLinkedListWorker<KeyType, DataType>::Scan(){
   
-  int new_dlist_count  = 0;
-  int del_flag = 0;
-  for(int i = 0; i < R; i ++){
-    for(int j = 0; j < N; j++){
-      if((dlist[i] == HP_Pointer[j]) && (HP_Pointer[j] != NULL)){
-        DLOG(INFO) << "We got ourselves a hazard pointer here thread :" << id << "\n";
-        DLOG(INFO) << "Value is :" << dlist[i] << "at index j :" << j << "\n";
-        new_dlist[new_dlist_count++] = dlist[i]; 
-        del_flag = 1;
-        break;
-      }
-    }
-    if(del_flag == 1){
-      delete dlist[i];
-    }
-    del_flag = 0;
-  }
+  int new_dcount = 0;
+  int flag = 0;
+  for(int i = 0; i < R; i++){
+     for(int j = 0; j < N; j++){
+       if((dlist[i] == HP_Pointer[j]) && HP_Pointer[j]!= NULL){
+          new_dlist[new_dcount++] = dlist[i];
+          flag = 1;
+          break;
+       }
+     }
+     if(flag == 0){
+        //Safe to delete
+        free(dlist[i]);
+     }
+     flag = 0;
+  }//loop ends here
 
-  //Clearing dlist[i]
+  //Zero out dlist
   for(int i = 0; i < R; i++){
     dlist[i] = NULL;
   }
 
-  DLOG(INFO) << "The new_dlist from thread :" << id << "\n";
-  for(int i = 0; i < new_dlist_count; i++){
-    DLOG(INFO) << "newdlist i: " << i << " is :" << new_dlist[i] << " thread :" << id << "\n";
+  //Fill up dlist with new_dcount members
+  for(int i = 0; i < new_dcount; i++){
+    dlist[i] = new_dlist[i];
+    new_dlist[i] = 0;
   }
 
-
-  for(int i = 0; i < new_dlist_count; i++){
-      dlist[i] = new_dlist[i];
-      new_dlist[i] = NULL;
-  }
-
-  dcount = new_dlist_count;
-
-  DLOG(INFO) << "After calling scan dlist is from thread :" << id << "\n";
-  for(int i = 0; i < R; i++){
-    DLOG(INFO) << "dlist i: " << i << " is :" << dlist[i] << " thread :" << id << "\n";
-  }
-
-  DLOG(INFO) << "Value of new_dlist_count :"<< new_dlist_count << "\n";
-  DLOG(INFO) << "Value of dcount :" << dcount << "\n";
+  //Adjusting dcount for the new time through code.
+  dcount = new_dcount;
 
 }
-
-
-
 
 template <class KeyType, class DataType>
 void LockFreeLinkedListWorker<KeyType, DataType>::DeleteNode(LockFreeLinkedListNode<KeyType, DataType>* node, unsigned id){
   
 
-
-  DLOG(INFO) << "Printing dcount :" << dcount << " thread :" << id << " \n";
-
-  //if(dcount < R){
-    dlist[dcount++] = node;
-  //}
+  dlist[dcount++] = node;
 
   if(dcount == R){
-    dcount = 0;
-    DLOG(INFO) << "Before calling scan what is dlist from thread :"<< id << "\n";
-    for(int i = 0; i < R; i++){
-      DLOG(INFO) << "dlist i: " << i << " is :" << dlist[i] << " thread :" << id << "\n";
-    }
-
-    DLOG(INFO) << "Calling Scan from thread :" << id << "\n";
-    Scan(id);
+    Scan();
   }
 
-}
-
-//Goes through the dlist and just frees all the nodes.
-template <class KeyType, class DataType>
-void LockFreeLinkedListWorker<KeyType, DataType>::DeleteRemnants(unsigned id){
-   for(int i = 0; i < dcount; i ++){
-      if(dlist[i] != NULL){
-        delete dlist[i];
-      }
-   }
-   delete[] dlist;
-   delete[] new_dlist;
-   (void)id;
 }
 
 
@@ -245,8 +191,7 @@ bool process_testline(Head *head, std::vector<std::string> tokens, Worker &ll, u
     }
     k = std::stoi(tokens[1]);
     d = tokens[2];
-    //DLOG(INFO) << "Inserting " << k << ":'" << d << "'...";
-    if (!(ll.insert(head, k, d, id))) {
+    if (!(ll.insert(head, k, d))) {
       DLOG(WARNING) << color_red("Unable to insert node. Possibly key(" + std::to_string(k) + ") already exists.");
       return false;
     } else {
@@ -260,9 +205,8 @@ bool process_testline(Head *head, std::vector<std::string> tokens, Worker &ll, u
       return false;
     }
     k = std::stoi(tokens[1]);
-    //DLOG(INFO) << "Searching by Key: " << k << "...";
     bool expected = (std::stoi(tokens[2]) == 1) ? true : false;
-    if (ll.search(head, k, id) == expected) {
+    if (ll.search(head, k) == expected) {
       return true;
     } else {
       DLOG(WARNING) << color_red("Did not match expected result for key(" + std::to_string(k) + ").");
@@ -281,7 +225,6 @@ bool process_testline(Head *head, std::vector<std::string> tokens, Worker &ll, u
       DLOG(WARNING) << color_red("Unable to remove node. Possibly key(" + std::to_string(k) + ") not found.");
       return false;
     } else {
-      //print_HP_Pointer_Style();
       return true;
     }
 
@@ -320,18 +263,13 @@ template <class Head, class Worker>
 void worker_start(unsigned id, Head *head, WorkQueue<std::string> *work_queue, bool *done, Barrier *worker_barrier, bool *result) {
   DLOG(INFO) << "Instantiated worker " << id;
   Worker ll;
-  //ll.set(id, HP);
-  //std::cout << "Printing after set. Interested to see what happens here\n";
-  //print_HP();
 
   ll.set(id, HP_Pointer);
-  //print_HP_Pointer_Style();
 
   bool has_work;
 
   std::string testline;
 
-  //std::cout << "Print something man..\n";
 
   while (1) {
     has_work = work_queue->check_and_get_work(testline);
@@ -343,8 +281,6 @@ void worker_start(unsigned id, Head *head, WorkQueue<std::string> *work_queue, b
       worker_barrier->wait();
     }
   }
-
-  //ll.DeleteRemnants(id);
   return;
 }
 
@@ -385,8 +321,6 @@ double run_linkedlist_tests(std::string testfile) {
 
   while (infile.good()) {
     getline(infile, testline);
-
-    //DLOG(INFO) << "Testline you are trying to test : " << testline << "\n";
     if (testline == "sync") {
       worker_barrier.activate();
       worker_barrier.wait();
@@ -413,6 +347,7 @@ double run_linkedlist_tests(std::string testfile) {
 
   DLOG(INFO) << "all_test_success : " << all_test_success << "\n";
   return (end_time - start_time);
+
 }
 
 
