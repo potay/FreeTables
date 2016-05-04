@@ -288,7 +288,7 @@ void worker_start(unsigned id, Head *head, WorkQueue<std::string> *work_queue, b
     }
   }
 
-  ll.print_dlist(id);
+  ll.free_dlist(id);
   return;
 }
 
@@ -360,7 +360,7 @@ double run_linkedlist_tests(std::string testfile) {
 
 
 int main(int argc, char *argv[]) {
-  //FLAGS_logtostderr = 1;
+  FLAGS_logtostderr = 1;
   // FLAGS_log_dir = "logs";
 
   std::string usage("Usage: " + std::string(argv[0]) +

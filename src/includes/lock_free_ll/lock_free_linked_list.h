@@ -120,7 +120,7 @@ class LockFreeLinkedListWorker {
     void Scan(unsigned id);
 
 
-    void print_dlist(unsigned id);
+    void free_dlist(unsigned id);
 
     // Returns a visual of whatever it can get of ll. Note that if this is not done with thread syncing, will produce funny stuff.
     std::string visual(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head);
@@ -177,7 +177,7 @@ class LockFreeLinkedListWorker {
 //******* CLASS IMPLEMENTATIONS ********//
 //**************************************//
 template <class KeyType, class DataType>
-void LockFreeLinkedListWorker<KeyType, DataType>::print_dlist(unsigned id){
+void LockFreeLinkedListWorker<KeyType, DataType>::free_dlist(unsigned id){
 
   (void)id;
   for(int i=0; i < BATCH_SIZE; i++){
