@@ -196,7 +196,7 @@ void LockFreeLinkedListWorker<KeyType, DataType>::free_dlist(unsigned id){
       delete dlist[i];
      }
   }
-  std::cout << "Count from thread :" << id << " is " << count << "\n";
+  //std::cout << "Count from thread :" << id << " is " << count << "\n";
 }
 
 

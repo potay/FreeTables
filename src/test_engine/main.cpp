@@ -45,7 +45,7 @@ typedef LockFreeLinkedListAtomicBlock<KeyType, DataType> LinkedListHead;
 typedef LockFreeLinkedListNode<KeyType, DataType> Node;
 
 
-//Create another array of hazard pointers
+//Create  array of hazard pointers
 LockFreeLinkedListNode<KeyType, DataType>** HP_Pointer;
 
 
@@ -91,7 +91,7 @@ void LockFreeLinkedListWorker<KeyType, DataType>::Scan(unsigned id){
      }
      if(flag == 0){
         //Safe to delete
-        std::cout << "Deleting from thread :" << id << " Key :" << dlist[i]->key << " Data :" << dlist[i]->data << "\n";
+        //std::cout << "Deleting from thread :" << id << " Key :" << dlist[i]->key << " Data :" << dlist[i]->data << "\n";
         delete dlist[i];
      }
      flag = 0;
@@ -351,6 +351,9 @@ int main(int argc, char *argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, true);
 
   init_HP_Pointer();
+
+  double standard_time = run_linkedlist_tests<StandardLinkedListHead, StandardLinkedListWorker>(FLAGS_testfile);
+  std::cout << "STANDARD: " << standard_time << std::endl;
 
   double new_time = run_linkedlist_tests<LinkedListHead, LinkedListWorker>(FLAGS_testfile);
   std::cout << "MEASURED: " << new_time << std::endl;
