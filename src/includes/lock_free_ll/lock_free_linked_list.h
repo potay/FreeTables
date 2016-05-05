@@ -8,7 +8,7 @@
 #include <iostream>
 
 #define NUM_HP_PER_THREAD 3
-#define MAX_THREADS 8
+#define MAX_THREADS 3
 
 //Same as N from main.cpp. Have to adjust value in main.cpp as well if you wish
 //to tune paramenter

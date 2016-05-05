@@ -1,0 +1,100 @@
+insert 0 zero
+insert 1 one
+insert 2 two
+insert 3 three
+insert 4 four
+insert 5 five
+insert 6 six
+insert 7 seven
+insert 8 eight
+insert 9 nine
+insert 10 ten
+insert 11 eleven
+insert 12 twelve
+insert 13 thirteen
+insert 14 fourteen
+insert 15 fifteen
+insert 16 sixteen
+insert 17 seventeen
+insert 18 eighteen
+insert 19 nineteen
+insert 20 twenty
+insert 21 twentyone
+insert 22 twentytwo
+insert 23 twentythree
+insert 24 twentyfour
+insert 25 twentyfive
+insert 26 twentysix
+insert 27 twentyseven
+insert 28 twentyeight
+insert 29 twentynine
+insert 30 thirty
+insert 31 thirtyone
+insert 32 thirtytwo
+insert 33 thirtythree
+insert 34 thirtyfour
+insert 35 thirtyfive
+insert 36 thirtysix
+insert 37 thirtyseven
+insert 38 thirtyeight
+insert 39 thirtynine
+insert 40 forty
+insert 41 fortyone
+insert 42 fortytwo
+insert 43 fortythree
+insert 44 fortyfour
+insert 45 fortyfive
+insert 46 fortysix
+insert 47 fortyseven
+insert 48 fortyeight
+insert 49 fortynine
+insert 50 fifty
+print
+sync
+remove 0
+remove 1
+remove 2
+remove 3
+remove 4 
+remove 5
+remove 6 
+remove 7
+remove 8 
+remove 9
+remove 10
+remove 11
+remove 12
+remove 13
+remove 14
+remove 15
+remove 16
+remove 17
+remove 18
+remove 19
+remove 20
+remove 21
+remove 22
+remove 23
+remove 24
+remove 25
+remove 26
+remove 27
+remove 28
+remove 29
+remove 30
+remove 31
+sync
+search 0 0
+search 2 0
+search 3 0
+search 4 0
+search 5 0
+search 50 1
+search 49 1
+search 33 1
+search 28 0
+search 22 0
+search 44 1
+search 32 1
+search 33 1
+search 24 0

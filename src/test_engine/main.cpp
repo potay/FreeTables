@@ -29,7 +29,7 @@
 
 
 #define NUM_HP_PER_THREAD 3
-#define MAX_THREADS 8
+#define MAX_THREADS 3
 #define R 2*MAX_THREADS*NUM_HP_PER_THREAD//R is BATCH SIZE
 #define N MAX_THREADS*NUM_HP_PER_THREAD //N is length of HP array
 //#define NDEBUG
@@ -146,7 +146,7 @@ void LockFreeLinkedListWorker<KeyType, DataType>::DeleteNode(LockFreeLinkedListN
 
 
 
-DEFINE_string(testfile, "tests/hello5.txt", "Test file to run.");
+DEFINE_string(testfile, "tests/hello6.txt", "Test file to run.");
 DEFINE_bool(debug_print_list, false, "Print a visualization of the linked-list after each test line for debugging purposes.");
 
 
@@ -380,19 +380,6 @@ int main(int argc, char *argv[]) {
 
   init_HP_Pointer();
 
-  //Checking the HP array before and after sort.
-  //Before sort.
-  // std::cout << "Before sort\n";
-  // for(int i =0; i < N; i++){
-  //   std::cout << "Element :" << i << "Value :" << &HP[i] << "\n";  
-  // }
-  // std::sort(HP.begin(), HP.end());
-  // std::cout << "After sort\n";
-  // for(int i=0; i<N; i++){
-  //   std::cout << "Element :" << i << "Value :" << &HP[i] << "\n"; 
-  // }
-  //double standard_time = run_linkedlist_tests<StandardLinkedListHead, StandardLinkedListWorker>(FLAGS_testfile);
-  //std::cout << "STANDARD: " << standard_time << std::endl;
   double new_time = run_linkedlist_tests<LinkedListHead, LinkedListWorker>(FLAGS_testfile);
   std::cout << "MEASURED: " << new_time << std::endl;
 
