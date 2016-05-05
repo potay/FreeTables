@@ -49,6 +49,7 @@ insert 47 fortyseven
 insert 48 fortyeight
 insert 49 fortynine
 insert 50 fifty
+print
 sync
 remove 0
 remove 1
@@ -71,10 +72,14 @@ remove 17
 remove 18
 remove 19
 remove 20
+remove 21
 remove 22
 remove 23
 remove 24
 remove 25
+sync
+print
+sync
 remove 26
 remove 27
 remove 28

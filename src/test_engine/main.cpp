@@ -53,7 +53,7 @@ LockFreeLinkedListNode<KeyType, DataType>** HP_Pointer;
 void print_HP_Pointer_Style(){
   std::cout << "Beginning a new print Pointer Style \n";
   for(int i =0; i < N; i ++){
-    std::cout << " HP i "<< i << " HP_Pointer[i] " << HP_Pointer[i] << " ";
+    std::cout << " HP i "<< (i+1) << " HP_Pointer[i] " << HP_Pointer[i] << " ";
     if(HP_Pointer[i]!=NULL){
       std::cout << "Key "<<HP_Pointer[i]->key << "Data "<< HP_Pointer[i]->data<<"\n";
     }
@@ -366,7 +366,7 @@ double run_linkedlist_tests(std::string testfile) {
 
 
 int main(int argc, char *argv[]) {
-   //FLAGS_logtostderr = 1;
+  FLAGS_logtostderr = 1;
   // FLAGS_log_dir = "logs";
 
   std::string usage("Usage: " + std::string(argv[0]) +

@@ -179,13 +179,17 @@ class LockFreeLinkedListWorker {
 template <class KeyType, class DataType>
 void LockFreeLinkedListWorker<KeyType, DataType>::free_dlist(unsigned id){
 
+  int count = 0;
   (void)id;
   for(int i=0; i < BATCH_SIZE; i++){
      if(dlist[i]!= NULL){
-      std::cout << "Printing dlist after deletion from thread : " << id << " dlist[i] :i " << i << "Key :" << dlist[i]->key << "Data :"<< dlist[i]->data << "\n";
+      //std::cout << "Printing dlist after deletion from thread : " << id <<  ""<<" dlist[i] :i " << (i+1) << "Key :" << dlist[i]->key << "Data :"<< dlist[i]->data << "\n";
+      count++;
       delete dlist[i];
      }
   }
+
+  //std::cout << "Count from thread :" << id << " is " << count << "\n";
 }
 
 
