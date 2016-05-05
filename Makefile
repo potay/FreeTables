@@ -16,8 +16,8 @@ $(eval $(call define_program,run_tests, \
         $(SRCDIR)/test_engine/main.cpp        \
 ))
 
-$(eval $(call define_library,global_lock_ll, \
-        $(INCLUDEDIR)/global_lock_ll/global_lock_linked_list.cpp      \
+$(eval $(call define_library,fine_grain_ll, \
+        $(INCLUDEDIR)/fine_grain_ll/fine_grain_linked_list.cpp      \
 ))
 
 $(eval $(call define_library,lock_free_ll, \

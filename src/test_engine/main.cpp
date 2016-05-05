@@ -17,7 +17,7 @@
 #include <ctime>
 
 #include "text_color/text_color.h"
-#include "global_lock_ll/global_lock_linked_list.h"
+#include "fine_grain_ll/fine_grain_linked_list.h"
 #include "lock_free_ll/lock_free_linked_list.h"
 #include "work_queue/work_queue.h"
 #include "cycle_timer/cycle_timer.h"
@@ -28,8 +28,8 @@
 // Define the Key and Data type of the Linked-list here.
 typedef int KeyType;
 typedef std::string DataType;
-typedef GlobalLockLinkedListWorker<KeyType, DataType> StandardLinkedListWorker;
-typedef GlobalLockLinkedListHeader<KeyType, DataType> StandardLinkedListHead;
+typedef FineGrainLinkedListWorker<KeyType, DataType> StandardLinkedListWorker;
+typedef FineGrainLinkedListHeader<KeyType, DataType> StandardLinkedListHead;
 typedef LockFreeLinkedListWorker<KeyType, DataType> LinkedListWorker;
 typedef LockFreeLinkedListAtomicBlock<KeyType, DataType> LinkedListHead;
 
