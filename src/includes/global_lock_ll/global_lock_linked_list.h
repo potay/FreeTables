@@ -8,52 +8,32 @@ template <class KeyType, class DataType>
 class GlobalLockLinkedListNode {
   public:
     // Constructors
-    GlobalLockLinkedListNode();
-    GlobalLockLinkedListNode(KeyType k, DataType d);
+    GlobalLockLinkedListNode() {
+      next = NULL;
+    };
+    GlobalLockLinkedListNode(KeyType k, DataType d) {
+      key = k;
+      data = d;
+      next = NULL;
+    };
     
-    // Setters/Getters
-    inline DataType& access_data() { return data; }
-
-    inline void set_next(GlobalLockLinkedListNode *node) { next = node; }
-    inline GlobalLockLinkedListNode* get_next() { return next; }
-
-    inline void set_previous(GlobalLockLinkedListNode *node) { previous = node; }
-    inline GlobalLockLinkedListNode* get_previous() { return previous; }
-
-    inline KeyType get_key() { return key; }
-
-  private:
+    std::mutex lock;
     KeyType key;
     DataType data;
-    GlobalLockLinkedListNode *previous;
-    GlobalLockLinkedListNode *next;
+    GlobalLockLinkedListNode<KeyType, DataType> *next;
 };
 
 template <class KeyType, class DataType>
 class GlobalLockLinkedListHeader {
   public:
     // Constructors
-    GlobalLockLinkedListHeader();
-    GlobalLockLinkedListHeader(const GlobalLockLinkedListHeader<KeyType, DataType>& h);
+    GlobalLockLinkedListHeader() {
+      start = NULL;
+    };
+    GlobalLockLinkedListHeader(GlobalLockLinkedListNode<KeyType, DataType> *node) { start = node; };
 
-    // Setters/Getters
-    inline void set_size(int s) { size = s; }
-    inline int get_size() { return size; }
-    inline void inc_size() { size++; }
-    inline void dec_size() { size--; }
-
-    inline void set_start(GlobalLockLinkedListNode<KeyType, DataType> *node) { start = node; }
-    inline GlobalLockLinkedListNode<KeyType, DataType>* get_start() { return start; }
-
-    inline void set_end(GlobalLockLinkedListNode<KeyType, DataType> *node) { end = node; }
-    inline GlobalLockLinkedListNode<KeyType, DataType>* get_end() { return end; }
-
-    std::mutex list_lock;
-
-  private:
-    int size;
+    std::mutex lock;
     GlobalLockLinkedListNode<KeyType, DataType> *start;
-    GlobalLockLinkedListNode<KeyType, DataType> *end;
 };
 
 
@@ -62,7 +42,7 @@ template <class KeyType, class DataType>
 class GlobalLockLinkedListWorker {
   public:
     // Constructors
-    GlobalLockLinkedListWorker();
+    GlobalLockLinkedListWorker() { prev = NULL; curr = NULL; };
 
     /** Linked List operations **/
     // if key does not exists, inserts node in undefined order (will switch to a sorted order) and returns true
@@ -78,7 +58,9 @@ class GlobalLockLinkedListWorker {
 
   private:
     // Returns pointer to node in list that has key k1 <= k, or NULL if no such node exists.
-    GlobalLockLinkedListNode<KeyType, DataType>* find(GlobalLockLinkedListHeader<KeyType, DataType> *header, KeyType k);
+    void find(GlobalLockLinkedListHeader<KeyType, DataType> *header, KeyType k);
+    GlobalLockLinkedListNode<KeyType, DataType> *prev;
+    GlobalLockLinkedListNode<KeyType, DataType> *curr;
 };
 
 
@@ -86,104 +68,41 @@ class GlobalLockLinkedListWorker {
 //******* CLASS IMPLEMENTATIONS ********//
 //**************************************//
 
-// Node Implementation
-template <class KeyType, class DataType>
-GlobalLockLinkedListNode<KeyType, DataType>::GlobalLockLinkedListNode() {
-  previous = NULL;
-  next = NULL;
-}
-
-template <class KeyType, class DataType>
-GlobalLockLinkedListNode<KeyType, DataType>::GlobalLockLinkedListNode(KeyType k, DataType d) : GlobalLockLinkedListNode() {
-  key = k;
-  data = d;
-  previous = NULL;
-  next = NULL;
-}
-
-
-// Header Implementation
-template <class KeyType, class DataType>
-GlobalLockLinkedListHeader<KeyType, DataType>::GlobalLockLinkedListHeader() {
-  size = 0;
-  start = NULL;
-  end = NULL;
-}
-
-template <class KeyType, class DataType>
-GlobalLockLinkedListHeader<KeyType, DataType>::GlobalLockLinkedListHeader(const GlobalLockLinkedListHeader<KeyType, DataType>& h) {
-  size = h.size;
-  start = h.start;
-  end = h.end;
-}
-
 
 // Linked List Implementation
 template <class KeyType, class DataType>
-GlobalLockLinkedListWorker<KeyType, DataType>::GlobalLockLinkedListWorker() {
-  ;
-}
-
-template <class KeyType, class DataType>
 bool GlobalLockLinkedListWorker<KeyType, DataType>::insert(GlobalLockLinkedListHeader<KeyType, DataType> *header, KeyType k, DataType d) {
-  std::unique_lock<std::mutex> lock(header->list_lock);
-  GlobalLockLinkedListNode<KeyType, DataType> *node = find(header, k);
+  std::unique_lock<std::mutex> lock(header->lock);
+  find(header, k);
 
-  if (node != NULL && node->get_key() == k) {
+  if (curr != NULL && curr->key == k) {
     return false;
   } else {
-
     GlobalLockLinkedListNode<KeyType, DataType> *new_node = new GlobalLockLinkedListNode<KeyType, DataType>(k, d);
 
-    if (node == NULL) {
-      if (header->get_start() != NULL) {
-        assert(k < header->get_start()->get_key());
-        header->get_start()->set_previous(new_node);
-        new_node->set_next(header->get_start());
+    if (curr == NULL) {
+      if (header->start != NULL) {
+        assert(k < header->start->key);
+        new_node->next = header->start;
       }
-
-      header->set_start(new_node);
-      
-      if (header->get_end() == NULL) {
-        assert(header->get_size() == 0);
-        header->set_end(new_node);
-      }
+      header->start = new_node;
     } else {
-      new_node->set_previous(node);
-
-      if (node->get_next() == NULL) {
-        assert(header->get_end() == node);
-        header->set_end(new_node);
-      } else {
-        new_node->set_next(node->get_next());
-        node->get_next()->set_previous(new_node);
-      }
-
-      node->set_next(new_node);
+      new_node->next = curr->next;
+      curr->next = new_node;
     }
-    
-    header->inc_size();
     return true;
-
   }
 }
 
 template <class KeyType, class DataType>
 bool GlobalLockLinkedListWorker<KeyType, DataType>::remove(GlobalLockLinkedListHeader<KeyType, DataType> *header, KeyType k) {
-  std::unique_lock<std::mutex> lock(header->list_lock);
-  GlobalLockLinkedListNode<KeyType, DataType> *curr_node = find(header, k);
-  if (curr_node != NULL && curr_node->get_key() == k) {
-    GlobalLockLinkedListNode<KeyType, DataType> *next_node = curr_node->get_next();
-    GlobalLockLinkedListNode<KeyType, DataType> *previous_node = curr_node->get_previous();
-    if (previous_node != NULL) previous_node->set_next(next_node);
-    if (next_node != NULL) next_node->set_previous(previous_node);
-
-    if (header->get_start() == curr_node) header->set_start(next_node);
-    if (header->get_end() == curr_node) header->set_end(previous_node);
-
-    header->dec_size();
-    delete curr_node;
-
+  std::unique_lock<std::mutex> lock(header->lock);
+  find(header, k);
+  if (curr != NULL && curr->key == k) {
+    GlobalLockLinkedListNode<KeyType, DataType> *next = curr->next;
+    if (prev != NULL) prev->next = next;
+    if (header->start == curr) header->start = next;
+    delete curr;
     return true;
   } else {
     return false;
@@ -192,47 +111,42 @@ bool GlobalLockLinkedListWorker<KeyType, DataType>::remove(GlobalLockLinkedListH
 
 template <class KeyType, class DataType>
 bool GlobalLockLinkedListWorker<KeyType, DataType>::search(GlobalLockLinkedListHeader<KeyType, DataType> *header, KeyType k) {
-  std::unique_lock<std::mutex> lock(header->list_lock);
-  GlobalLockLinkedListNode<KeyType, DataType> *node = find(header, k);
-  return (node != NULL && node->get_key() == k);
+  std::unique_lock<std::mutex> lock(header->lock);
+  find(header, k);
+  return (curr != NULL && curr->key == k);
 }
 
 template <class KeyType, class DataType>
-GlobalLockLinkedListNode<KeyType, DataType>* GlobalLockLinkedListWorker<KeyType, DataType>::find(GlobalLockLinkedListHeader<KeyType, DataType> *header, KeyType k) {
-  GlobalLockLinkedListNode<KeyType, DataType> *curr_node = header->get_start();
-  GlobalLockLinkedListNode<KeyType, DataType> *prev_node = NULL;
-  while (curr_node != NULL) {
-    if (k < curr_node->get_key()) break;
-    prev_node = curr_node;
-    curr_node = curr_node->get_next();
+void GlobalLockLinkedListWorker<KeyType, DataType>::find(GlobalLockLinkedListHeader<KeyType, DataType> *header, KeyType k) {
+  if (header->start == NULL) return;
+  curr = header->start;
+  if (curr == NULL) return;
+  prev = NULL;
+  while (curr->next != NULL) {
+    prev = curr;
+    curr = curr->next;
+    if (k < curr->key) break;
   }
-  return prev_node;
+  return;
 }
 
 template <class KeyType, class DataType>
 std::string GlobalLockLinkedListWorker<KeyType, DataType>::visual(GlobalLockLinkedListHeader<KeyType, DataType> *header) {
-  std::unique_lock<std::mutex> lock(header->list_lock);
+  std::unique_lock<std::mutex> lock(header->lock);
   std::stringstream ss;
 
   ss << "start";
 
-  GlobalLockLinkedListNode<KeyType, DataType> *curr_node = header->get_start();
-  GlobalLockLinkedListNode<KeyType, DataType> *prev_node = NULL;
+  GlobalLockLinkedListNode<KeyType, DataType> *curr_node = header->start;
   while (curr_node != NULL) {
-    ss << ((curr_node->get_previous() == prev_node) ? "<" : "")
-       << "->"
-       << curr_node->get_key()
+    ss << "->"
+       << curr_node->key
        << ":"
-       << curr_node->access_data();
-    prev_node = curr_node;
-    curr_node = curr_node->get_next();
+       << curr_node->data;
+    curr_node = curr_node->next;
   }
 
-  if (header->get_end() != prev_node) {
-    ss << "-/->end";
-  } else {
-    ss << "->end";
-  }
+  ss << "->end";
 
   return ss.str();
 }
