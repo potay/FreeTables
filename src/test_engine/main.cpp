@@ -147,6 +147,9 @@ bool run_testline(Head *head, std::string testline, Worker &ll) {
   // Split line into its tokens
   std::vector<std::string> tokens = split(testline, ' ');
 
+  // If line is empty, return success
+  if (tokens.size() < 1) return true;
+
   // Run testline
   bool success = process_testline<Head, Worker>(head, tokens, ll);
 
@@ -188,7 +191,7 @@ double run_linkedlist_tests(std::string testfile) {
   DLOG(INFO) << "Initializing testing environment...";
 
   // Initialize data structures
-  Head head;
+  Head *head = new Head();
   WorkQueue<std::string> work_queue;
   std::vector<std::thread> workers;
   Barrier worker_barrier(std::thread::hardware_concurrency() + 1);
@@ -198,7 +201,7 @@ double run_linkedlist_tests(std::string testfile) {
   // Initialize worker pool
   for (unsigned i = 0; i < std::thread::hardware_concurrency(); ++i) {
     result[i] = true;
-    workers.emplace_back(std::thread(worker_start<Head, Worker>, i, &head, &work_queue, &done, &worker_barrier, &result[i]));
+    workers.emplace_back(std::thread(worker_start<Head, Worker>, i, head, &work_queue, &done, &worker_barrier, &result[i]));
   }
 
   // Starting the clock
@@ -227,6 +230,8 @@ double run_linkedlist_tests(std::string testfile) {
   done = true;
   join_all(workers);
 
+  delete head;
+
   // Stopping the clock
   double end_time = CycleTimer::currentSeconds();
 
@@ -243,7 +248,7 @@ double run_linkedlist_tests(std::string testfile) {
 
 
 int main(int argc, char *argv[]) {
-  // FLAGS_logtostderr = 1;
+  FLAGS_logtostderr = 1;
   // FLAGS_log_dir = "logs";
 
   std::string usage("Usage: " + std::string(argv[0]) +
@@ -257,8 +262,8 @@ int main(int argc, char *argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, true);
 
   double standard_time = run_linkedlist_tests<StandardLinkedListHead, StandardLinkedListWorker>(FLAGS_testfile);
-  std::cout << "STANDARD: " << standard_time << std::endl;
   double new_time = run_linkedlist_tests<LinkedListHead, LinkedListWorker>(FLAGS_testfile);
+  std::cout << "STANDARD: " << standard_time << std::endl;
   std::cout << "MEASURED: " << new_time << std::endl;
 
   return 0;
