@@ -176,6 +176,14 @@ class LockFreeLinkedListWorker {
 //**************************************//
 //******* CLASS IMPLEMENTATIONS ********//
 //**************************************//
+
+template <class KeyType, class DataType>
+void LockFreeLinkedListWorker<KeyType, DataType>::set(unsigned i, LockFreeLinkedListNode<KeyType, DataType>** arr){
+  hp0 = &arr[3*i];
+  hp1 = &arr[3*i+ 1];
+  hp2 = &arr[3*i+ 2];
+}
+
 template <class KeyType, class DataType>
 void LockFreeLinkedListWorker<KeyType, DataType>::free_dlist(unsigned id){
 
@@ -188,8 +196,7 @@ void LockFreeLinkedListWorker<KeyType, DataType>::free_dlist(unsigned id){
       delete dlist[i];
      }
   }
-
-  //std::cout << "Count from thread :" << id << " is " << count << "\n";
+  std::cout << "Count from thread :" << id << " is " << count << "\n";
 }
 
 

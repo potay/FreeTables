@@ -64,30 +64,16 @@ void print_HP_Pointer_Style(){
 }
 
 void init_HP_Pointer(){
-
-
-
   HP_Pointer = new LockFreeLinkedListNode<KeyType, DataType>*[N];
   for(int i = 0; i < N; i++){
     HP_Pointer[i] = 0;
   }
-
-
 }
 
 void free_HP_Pointer(){
-  
   delete[] HP_Pointer;
 }
 
-
-template <class KeyType, class DataType>
-void LockFreeLinkedListWorker<KeyType, DataType>::set(unsigned i, LockFreeLinkedListNode<KeyType, DataType>** arr){
-  
-  LockFreeLinkedListWorker<KeyType, DataType>::hp0 = &arr[3*i];
-  LockFreeLinkedListWorker<KeyType, DataType>::hp1 = &arr[3*i+ 1];
-  LockFreeLinkedListWorker<KeyType, DataType>::hp2 = &arr[3*i+ 2];
-}
 
 template <class KeyType, class DataType>
 void LockFreeLinkedListWorker<KeyType, DataType>::Scan(unsigned id){
@@ -110,43 +96,34 @@ void LockFreeLinkedListWorker<KeyType, DataType>::Scan(unsigned id){
      }
      flag = 0;
   }//loop ends here
-
   //Zero out dlist
   for(int i = 0; i < R; i++){
     dlist[i] = NULL;
   }
-
   //Fill up dlist with new_dcount members
   for(int i = 0; i < new_dcount; i++){
     dlist[i] = new_dlist[i];
     new_dlist[i] = 0;
   }
-
   //Adjusting dcount for the new time through code.
   dcount = new_dcount;
-
 }
 
 template <class KeyType, class DataType>
 void LockFreeLinkedListWorker<KeyType, DataType>::DeleteNode(LockFreeLinkedListNode<KeyType, DataType>* node, unsigned id){
-  
 
   dlist[dcount++] = node;
-
   //std::cout << "Calling delete from thread : " << id << " Key :"<< (dlist[dcount -1])->key << "Data :" << (dlist[dcount -1])->data << "\n";
-
-
   if(dcount == R){
     //std::cout << "Entering Scan .. value of R is : " << R << "\n";
     //print_HP_Pointer_Style();
     Scan(id);
   }
-
 }
 
 
 
-DEFINE_string(testfile, "tests/hello6.txt", "Test file to run.");
+DEFINE_string(testfile, "tests/hello5.txt", "Test file to run.");
 DEFINE_bool(debug_print_list, false, "Print a visualization of the linked-list after each test line for debugging purposes.");
 
 
@@ -274,13 +251,9 @@ template <class Head, class Worker>
 void worker_start(unsigned id, Head *head, WorkQueue<std::string> *work_queue, bool *done, Barrier *worker_barrier, bool *result) {
   DLOG(INFO) << "Instantiated worker " << id;
   Worker ll;
-
   ll.set(id, HP_Pointer);
-
   bool has_work;
-
   std::string testline;
-
 
   while (1) {
     has_work = work_queue->check_and_get_work(testline);
@@ -294,7 +267,6 @@ void worker_start(unsigned id, Head *head, WorkQueue<std::string> *work_queue, b
   }
 
   ll.free_dlist(id);
-  //print_HP_Pointer_Style();
   return;
 }
 
@@ -314,7 +286,7 @@ double run_linkedlist_tests(std::string testfile) {
   std::vector<std::thread> workers;
   Barrier worker_barrier(MAX_THREADS + 1);
   bool done = false;
-  bool result[MAX_THREADS];
+  bool result[MAX_THREADS]; 
 
   // Initialize worker pool
   for (unsigned i = 0; i < MAX_THREADS; ++i) {
@@ -366,7 +338,7 @@ double run_linkedlist_tests(std::string testfile) {
 
 
 int main(int argc, char *argv[]) {
-  FLAGS_logtostderr = 1;
+  //FLAGS_logtostderr = 1;
   // FLAGS_log_dir = "logs";
 
   std::string usage("Usage: " + std::string(argv[0]) +
