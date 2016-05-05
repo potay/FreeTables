@@ -16,12 +16,13 @@ text = text.replace("  ", " ")
 text = text.split()
 text = dict(enumerate(text))
 currtext = text.keys()
+currtext_temp = []
 inserted_temp = []
 inserted = []
 
 prob_delete = 0.15
 prob_search = 0.10
-n = 10000
+n = 100000
 string = ""
 
 for i in xrange(n):
@@ -29,13 +30,17 @@ for i in xrange(n):
     movekey = random.choice(inserted_temp)
     inserted.append(movekey)
     inserted_temp.remove(movekey)
+  if len(currtext_temp) > 10:
+    movekey = random.choice(currtext_temp)
+    currtext.append(movekey)
+    currtext_temp.remove(movekey)
 
   toss = random.random()
 
   if (len(inserted) > 0 and toss < prob_delete+prob_search) or (len(currtext) == 0):
     if (toss < prob_delete):
       key = random.choice(inserted)
-      currtext.append(key)
+      currtext_temp.append(key)
       string += "remove " + str(key) + "\n"
       inserted.remove(key)
     else:
@@ -47,4 +52,4 @@ for i in xrange(n):
     string += "insert " + str(key) + " " + str(text[key]) + "\n"
     currtext.remove(key)
 
-print string
+print string + "sync\nprint\nsync\nhistogram"
