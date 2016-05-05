@@ -77,6 +77,8 @@ class GlobalLockLinkedListWorker {
 
     // Returns human-readable visualization of linked-list
     std::string visual(GlobalLockLinkedListHeader<KeyType, DataType> *header);
+    int length(GlobalLockLinkedListHeader<KeyType, DataType> *header);
+    std::string histogram(GlobalLockLinkedListHeader<KeyType, DataType> *header);
 
   private:
     // Returns pointer to node in list that has key k1 <= k, or NULL if no such node exists.
@@ -246,6 +248,34 @@ std::string GlobalLockLinkedListWorker<KeyType, DataType>::visual(GlobalLockLink
     ss << "-/->end";
   } else {
     ss << "->end";
+  }
+
+  return ss.str();
+}
+
+template <class KeyType, class DataType>
+int GlobalLockLinkedListWorker<KeyType, DataType>::length(GlobalLockLinkedListHeader<KeyType, DataType> *header) {
+  std::unique_lock<std::mutex> lock(header->list_lock);
+  int count = 0;
+
+  GlobalLockLinkedListNode<KeyType, DataType> *curr_node = header->get_start();
+  while (curr_node != NULL) {
+    count += 1;
+    curr_node = curr_node->get_next();
+  }
+
+  return count;
+}
+
+template <class KeyType, class DataType>
+std::string GlobalLockLinkedListWorker<KeyType, DataType>::histogram(GlobalLockLinkedListHeader<KeyType, DataType> *header) {
+  std::unique_lock<std::mutex> lock(header->list_lock);
+  std::stringstream ss;
+
+  GlobalLockLinkedListNode<KeyType, DataType> *curr_node = header->get_start();
+  while (curr_node != NULL) {
+    ss << "X";
+    curr_node = curr_node->get_next();
   }
 
   return ss.str();
