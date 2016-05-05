@@ -29,7 +29,7 @@
 
 
 #define NUM_HP_PER_THREAD 3
-#define MAX_THREADS 2
+#define MAX_THREADS 8
 #define R 2*MAX_THREADS*NUM_HP_PER_THREAD//R is BATCH SIZE
 #define N MAX_THREADS*NUM_HP_PER_THREAD //N is length of HP array
 //#define NDEBUG
@@ -105,7 +105,7 @@ void LockFreeLinkedListWorker<KeyType, DataType>::Scan(unsigned id){
      }
      if(flag == 0){
         //Safe to delete
-        //std::cout << "Deleting from thread :" << id << "Key :" << dlist[i]->key << "Data :" << dlist[i]->data << "\n";
+        std::cout << "Deleting from thread :" << id << " Key :" << dlist[i]->key << " Data :" << dlist[i]->data << "\n";
         delete dlist[i];
      }
      flag = 0;
@@ -133,7 +133,12 @@ void LockFreeLinkedListWorker<KeyType, DataType>::DeleteNode(LockFreeLinkedListN
 
   dlist[dcount++] = node;
 
+  //std::cout << "Calling delete from thread : " << id << " Key :"<< (dlist[dcount -1])->key << "Data :" << (dlist[dcount -1])->data << "\n";
+
+
   if(dcount == R){
+    //std::cout << "Entering Scan .. value of R is : " << R << "\n";
+    //print_HP_Pointer_Style();
     Scan(id);
   }
 
@@ -289,6 +294,7 @@ void worker_start(unsigned id, Head *head, WorkQueue<std::string> *work_queue, b
   }
 
   ll.free_dlist(id);
+  //print_HP_Pointer_Style();
   return;
 }
 
@@ -360,7 +366,7 @@ double run_linkedlist_tests(std::string testfile) {
 
 
 int main(int argc, char *argv[]) {
-  FLAGS_logtostderr = 1;
+   //FLAGS_logtostderr = 1;
   // FLAGS_log_dir = "logs";
 
   std::string usage("Usage: " + std::string(argv[0]) +

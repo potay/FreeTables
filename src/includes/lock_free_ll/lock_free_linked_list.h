@@ -8,7 +8,7 @@
 #include <iostream>
 
 #define NUM_HP_PER_THREAD 3
-#define MAX_THREADS 2
+#define MAX_THREADS 8
 
 //Same as N from main.cpp. Have to adjust value in main.cpp as well if you wish
 //to tune paramenter
@@ -182,7 +182,7 @@ void LockFreeLinkedListWorker<KeyType, DataType>::free_dlist(unsigned id){
   (void)id;
   for(int i=0; i < BATCH_SIZE; i++){
      if(dlist[i]!= NULL){
-      //std::cout << "\n Printing dlist after deletion from thread : " << id << "dlist[i] :i " << i << "Key :" << dlist[i]->key << "Data :"<< dlist[i]->data << "\n";
+      std::cout << "Printing dlist after deletion from thread : " << id << " dlist[i] :i " << i << "Key :" << dlist[i]->key << "Data :"<< dlist[i]->data << "\n";
       delete dlist[i];
      }
   }
