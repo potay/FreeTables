@@ -103,6 +103,8 @@ class LockFreeLinkedListWorker {
 
     // Returns a visual of whatever it can get of ll. Note that if this is not done with thread syncing, will produce funny stuff.
     std::string visual(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head);
+    int length(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head);
+    std::string histogram(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head);
 
     LockFreeLinkedListWorker() {
       prev = NULL;
@@ -243,5 +245,33 @@ std::string LockFreeLinkedListWorker<KeyType, DataType>::visual(LockFreeLinkedLi
     boo = &(curr->mark_next_tag);
   }
   ss << "->foot";
+  return ss.str();
+}
+
+template <class KeyType, class DataType>
+int LockFreeLinkedListWorker<KeyType, DataType>::length(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head) {
+  LockFreeLinkedListAtomicBlock<KeyType, DataType> *boo = head;
+  int count = 0;
+  while (true) {
+    LockFreeLinkedListNode<KeyType, DataType> *curr = boo->load().next;
+    if (curr == NULL) break;
+    // ss << "->" << curr->mark_next_tag.load().mark << ":" << curr->mark_next_tag.load().tag << ":" << curr->key << ":" << curr->data;
+    count += 1;
+    boo = &(curr->mark_next_tag);
+  }
+  return count;
+}
+
+template <class KeyType, class DataType>
+std::string LockFreeLinkedListWorker<KeyType, DataType>::histogram(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head) {
+  LockFreeLinkedListAtomicBlock<KeyType, DataType> *boo = head;
+  std::stringstream ss;
+
+  while (true) {
+    LockFreeLinkedListNode<KeyType, DataType> *curr = boo->load().next;
+    if (curr == NULL) break;
+    ss << "X";
+    boo = &(curr->mark_next_tag);
+  }
   return ss.str();
 }

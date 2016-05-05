@@ -3,7 +3,7 @@
 template <class ListHead, class KeyType, class DataType>
 class HashTable {
  public:
-  HashTable(int num_buckets = 100);
+  HashTable(int num_buckets = 1000);
 
   int length;
 
@@ -26,6 +26,7 @@ class HashTableWorker {
   bool remove(HashTable<ListHead, KeyType, DataType> *table, const KeyType k);
   bool get(HashTable<ListHead, KeyType, DataType> *table, const KeyType k, DataType& v);
   std::string visual(HashTable<ListHead, KeyType, DataType> *table);
+  std::string histogram(HashTable<ListHead, KeyType, DataType> *table);
 
  private:
   ListHeadWorker worker;
@@ -56,7 +57,8 @@ ListHead* HashTable<ListHead, KeyType, DataType>::get_bucket_index(const int i) 
 
 template <class ListHead, class KeyType, class DataType>
 int HashTable<ListHead, KeyType, DataType>::hash(const KeyType k) {
-  return k % length;
+  // return k % length;
+  return std::hash<KeyType>{}(k) % length;
 }
 
 template <class ListHead, class KeyType, class DataType>
@@ -94,6 +96,17 @@ std::string HashTableWorker<ListHead, ListHeadWorker, KeyType, DataType>::visual
   for (int i = 0; i < table->length; i++) {
     ss << "[" << i << "] => ";
     ss << worker.visual(table->get_bucket_index(i));
+    ss << "\n";
+  }
+  return ss.str();
+}
+
+template <class ListHead, class ListHeadWorker, class KeyType, class DataType>
+std::string HashTableWorker<ListHead, ListHeadWorker, KeyType, DataType>::histogram(HashTable<ListHead, KeyType, DataType> *table) {
+  std::stringstream ss;
+  for (int i = 0; i < table->length; i++) {
+    ss << "[" << i << "] => ";
+    ss << worker.histogram(table->get_bucket_index(i));
     ss << "\n";
   }
   return ss.str();
