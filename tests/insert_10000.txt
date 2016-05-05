@@ -9998,4 +9998,5 @@ insert 4059 4059
 insert 5446 5446
 insert 5027 5027
 insert 9760 9760
-
+sync
+print

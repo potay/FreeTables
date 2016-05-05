@@ -998,3 +998,7 @@ insert 94 94
 insert 4 4
 insert 488 488
 insert 377 377
+sync
+print
+sync
+histogram
