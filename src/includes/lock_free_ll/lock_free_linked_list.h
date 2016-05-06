@@ -364,8 +364,12 @@ try_again:
       if (ckey >= key) return ckey == key;
       prev = &(pmark_cur_ptag.load().next->mark_next_tag);
 
-
+      /*Best position to print debugging information
+        At this point one can tell whether hp2, hp1 and hp0
+        mirror next, curr and prev.*/
+        
       //print_hp0_hp1_hp2(id);
+      //print_hazard_pointer_arr(hazardPointerArr, id);
       //*hp2 <- curr
       *(hp2) = pmark_cur_ptag.load().next;
       // /DLOG(INFO) << "hp2 :" << hp2 << "\n";
@@ -389,6 +393,9 @@ try_again:
 
     //*hp1 <- next;
     *(hp1) = cmark_next_ctag.load().next;
+
+    //print_hazard_pointer_arr(hazardPointerArr, id);
+
 
     }
 
@@ -428,11 +435,17 @@ void LockFreeLinkedListWorker<KeyType, DataType>::print_hp0_hp1_hp2(unsigned id)
 
 template <class KeyType, class DataType>
 void LockFreeLinkedListWorker<KeyType, DataType>::print_hazard_pointer_arr(LockFreeLinkedListNode<KeyType, DataType>** hazardPointerArr, unsigned id){
+  std::cout << "Starting new print  thread : " << id << "\n";
   for(int i =0; i < NUM_HP; i++){
     if( hazardPointerArr[i]!= NULL ){
-      std::cout << " hazardPointerArr[i] :thread "<< id  << " Key: Data " << hazardPointerArr[i]->key << ":" << hazardPointerArr[i]->data << "\n";
+      std::cout << " hazardPointerArr[i] thread : "<< id  << " Key: Data " << hazardPointerArr[i]->key << ":" << hazardPointerArr[i]->data << "\n";
+    }
+    else{
+      std::cout << " hazardPointerArr[i] thread : "<< id  << " : " << hazardPointerArr[i] << "\n";
     }
   }
+  std::cout << "Ending  print  thread : " << id << "\n";
+
 }
 
 
