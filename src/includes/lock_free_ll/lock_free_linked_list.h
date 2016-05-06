@@ -8,7 +8,7 @@
 #include <iostream>
 
 #define NUM_HP_PER_THREAD 3
-#define MAX_THREADS 3
+#define MAX_THREADS 2
 
 //Same as N from main.cpp. Have to adjust value in main.cpp as well if you wish
 //to tune paramenter
@@ -168,8 +168,10 @@ class LockFreeLinkedListWorker {
 
 
     /*Private Linked List operations*/
-    bool find(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key, LockFreeLinkedListNode<KeyType, DataType>** hazardPointerArr, unsigned id);
+    bool find(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key, LockFreeLinkedListNode<KeyType, DataType>** hazardPointerArr, unsigned id); 
 
+    //Code to check if the pointers are getting passed in the right manner
+    void print_hp0_hp1_hp2(unsigned id);
 
 };
 
@@ -197,7 +199,7 @@ void LockFreeLinkedListWorker<KeyType, DataType>::free_dlist(unsigned id){
       delete dlist[i];
      }
   }
-  std::cout << "Count from thread :" << id << " is " << count << "\n";
+  //std::cout << "Count from thread :" << id << " is " << count << "\n";
 }
 
 
@@ -205,11 +207,12 @@ void LockFreeLinkedListWorker<KeyType, DataType>::free_dlist(unsigned id){
 template <class KeyType, class DataType>
 void LockFreeLinkedListWorker<KeyType, DataType>::delete_node(LockFreeLinkedListNode<KeyType, DataType>* node, LockFreeLinkedListNode<KeyType, DataType>** hazardPointerArr, unsigned id){
 
+
+
   dlist[dcount++] = node;
   //std::cout << "Calling delete from thread : " << id << " Key :"<< (dlist[dcount -1])->key << "Data :" << (dlist[dcount -1])->data << "\n";
   if(dcount == BATCH_SIZE){
     //std::cout << "Entering Scan .. value of R is : " << R << "\n";
-    //print_HP_Pointer_Style();
     scan(hazardPointerArr ,id);
   }
 }
@@ -231,7 +234,7 @@ void LockFreeLinkedListWorker<KeyType, DataType>::scan( LockFreeLinkedListNode<K
      }
      if(flag == 0){
         //Safe to delete
-        std::cout << "Deleting from thread :" << id << " Key :" << dlist[i]->key << " Data :" << dlist[i]->data << "\n";
+        //std::cout << "Deleting from thread :" << id << " Key :" << dlist[i]->key << " Data :" << dlist[i]->data << "\n";
         delete dlist[i];
      }
      flag = 0;
@@ -277,7 +280,6 @@ bool LockFreeLinkedListWorker<KeyType, DataType>::insert(LockFreeLinkedListAtomi
   *(hp1) = NULL;
   *(hp2) = NULL;
   return result;
-  return true;
 }
 
 template <class KeyType, class DataType>
@@ -370,6 +372,8 @@ try_again:
       if (ckey >= key) return ckey == key;
       prev = &(pmark_cur_ptag.load().next->mark_next_tag);
 
+
+      //print_hp0_hp1_hp2(id);
       //*hp2 <- curr
       *(hp2) = pmark_cur_ptag.load().next;
       // /DLOG(INFO) << "hp2 :" << hp2 << "\n";
@@ -393,9 +397,12 @@ try_again:
 
     //*hp1 <- next;
     *(hp1) = cmark_next_ctag.load().next;
-  }
+
+    }
 
 }
+
+
 
 template <class KeyType, class DataType>
 std::string LockFreeLinkedListWorker<KeyType, DataType>::visual(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head) {
@@ -411,3 +418,28 @@ std::string LockFreeLinkedListWorker<KeyType, DataType>::visual(LockFreeLinkedLi
   ss << "->foot";
   return ss.str();
 }
+
+
+template <class KeyType, class DataType>
+void LockFreeLinkedListWorker<KeyType, DataType>::print_hp0_hp1_hp2(unsigned id){
+
+   if(*hp0 != NULL){
+     std::cout << "hp0 from thread : " << id << " Key " << (*hp0)->key << " Data " << (*hp0)->data << "\n";
+   }
+
+   if(*hp1 != NULL){
+     std::cout << "hp1 from thread : " << id << " Key " << (*hp1)->key << " Data " << (*hp1)->data << "\n";
+   }
+   
+   if(*hp2 != NULL){
+     std::cout << "hp2 from thread : " << id << " Key " << (*hp2)->key << " Data " << (*hp2)->data << "\n";
+   }
+}
+
+
+
+
+
+
+
+

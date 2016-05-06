@@ -29,7 +29,7 @@
 
 
 #define NUM_HP_PER_THREAD 3
-#define MAX_THREADS 3
+#define MAX_THREADS 2
 #define R 2*MAX_THREADS*NUM_HP_PER_THREAD//R is BATCH SIZE
 #define N MAX_THREADS*NUM_HP_PER_THREAD //N is length of HP array
 //#define NDEBUG
@@ -46,19 +46,6 @@ typedef LockFreeLinkedListNode<KeyType, DataType> Node;
 
 
 
-// template <class KeyType, class DataType>
-// void print_hazard_arr(LockFreeLinkedListNode<KeyType, DataType>** hazardPointerArr){
-//   std::cout << "Beginning a new print Pointer Style \n";
-//   for(int i =0; i < N; i ++){
-//     std::cout << " HP i "<< (i+1) << " hazardPointerArr[i] " << hazardPointerArr[i] << " ";
-//     if(HP_Pointer[i]!=NULL){
-//       std::cout << "Key "<<hazardPointerArr[i]->key << "Data "<< hazardPointerArr[i]->data<<"\n";
-//     }
-//     else{
-//       std::cout << "\n";
-//     }
-//   }
-// }
 
 
 DEFINE_string(testfile, "tests/hello5.txt", "Test file to run.");
@@ -290,7 +277,7 @@ double run_linkedlist_tests(std::string testfile) {
 
 
 int main(int argc, char *argv[]) {
-  FLAGS_logtostderr = 1;
+  //FLAGS_logtostderr = 1;
   // FLAGS_log_dir = "logs";
 
   std::string usage("Usage: " + std::string(argv[0]) +
