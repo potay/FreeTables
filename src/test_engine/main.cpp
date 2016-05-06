@@ -45,9 +45,6 @@ typedef LockFreeLinkedListAtomicBlock<KeyType, DataType> LinkedListHead;
 typedef LockFreeLinkedListNode<KeyType, DataType> Node;
 
 
-
-
-
 DEFINE_string(testfile, "tests/hello5.txt", "Test file to run.");
 DEFINE_bool(debug_print_list, false, "Print a visualization of the linked-list after each test line for debugging purposes.");
 

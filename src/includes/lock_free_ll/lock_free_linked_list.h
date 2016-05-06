@@ -104,6 +104,7 @@ class LockFreeLinkedListWorker {
 
     // Initialize hp0, hp1, hp2 from HP set
     void set(unsigned i,  LockFreeLinkedListNode<KeyType, DataType>** arr);
+
     /** Linked List operations **/
     // if key does not exists, inserts node in undefined order (will switch to a sorted order) and returns true
     // else returns false
@@ -118,8 +119,6 @@ class LockFreeLinkedListWorker {
     void scan(LockFreeLinkedListNode<KeyType, DataType>** hazardPointerArr, unsigned id);
     //Frees nodes stored in private dlist;
     void free_dlist(unsigned id);
-   
-
     // Returns a visual of whatever it can get of ll. Note that if this is not done with thread syncing, will produce funny stuff.
     std::string visual(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head);
 
@@ -155,13 +154,12 @@ class LockFreeLinkedListWorker {
     LockFreeLinkedListAtomicBlock<KeyType, DataType> pmark_cur_ptag;
     LockFreeLinkedListAtomicBlock<KeyType, DataType> cmark_next_ctag;
 
-    //Hazard pointer variables
+    //Hazard pointer variables 
     LockFreeLinkedListNode<KeyType, DataType> **hp0;
     LockFreeLinkedListNode<KeyType, DataType> **hp1;
     LockFreeLinkedListNode<KeyType, DataType> **hp2;
 
-    //Variables for HP deletion. According to cpp specs for default initialization,
-    //dcount and dlist should be default initialized.
+    //Variables for HP deletion. 
     int dcount;
     LockFreeLinkedListNode<KeyType, DataType>** dlist;
     LockFreeLinkedListNode<KeyType, DataType>** new_dlist;
@@ -169,9 +167,10 @@ class LockFreeLinkedListWorker {
 
     /*Private Linked List operations*/
     bool find(LockFreeLinkedListAtomicBlock<KeyType, DataType> *head, KeyType key, LockFreeLinkedListNode<KeyType, DataType>** hazardPointerArr, unsigned id); 
-
     //Code to check if the pointers are getting passed in the right manner
     void print_hp0_hp1_hp2(unsigned id);
+    //Printing hazard_pointer_array
+    void print_hazard_pointer_arr(LockFreeLinkedListNode<KeyType, DataType>** hazardPointerArr, unsigned id);
 
 };
 
@@ -203,12 +202,8 @@ void LockFreeLinkedListWorker<KeyType, DataType>::free_dlist(unsigned id){
 }
 
 
-
 template <class KeyType, class DataType>
 void LockFreeLinkedListWorker<KeyType, DataType>::delete_node(LockFreeLinkedListNode<KeyType, DataType>* node, LockFreeLinkedListNode<KeyType, DataType>** hazardPointerArr, unsigned id){
-
-
-
   dlist[dcount++] = node;
   //std::cout << "Calling delete from thread : " << id << " Key :"<< (dlist[dcount -1])->key << "Data :" << (dlist[dcount -1])->data << "\n";
   if(dcount == BATCH_SIZE){
@@ -218,10 +213,12 @@ void LockFreeLinkedListWorker<KeyType, DataType>::delete_node(LockFreeLinkedList
 }
 
 
-
 template <class KeyType, class DataType>
 void LockFreeLinkedListWorker<KeyType, DataType>::scan( LockFreeLinkedListNode<KeyType, DataType>** hazardPointerArr, unsigned id){
-  
+   
+  (void) id;
+  //print_hazard_pointer_arr(hazardPointerArr, id);
+
   int new_dcount = 0;
   int flag = 0;
   for(int i = 0; i < BATCH_SIZE; i++){
@@ -273,8 +270,7 @@ bool LockFreeLinkedListWorker<KeyType, DataType>::insert(LockFreeLinkedListAtomi
       //std::cout << "Inserting from thread :" << id << "Key :" << node->key << "Data :" << node->data << "\n";
       result = true;
       break;
-    }
-      
+    }   
   }
   *(hp0) = NULL;
   *(hp1) = NULL;
@@ -289,17 +285,14 @@ bool LockFreeLinkedListWorker<KeyType, DataType>::remove(LockFreeLinkedListAtomi
     if (!find(head, key, hazardPointerArr, id)) {
       result = false;
       break;
-    }
-    
+    } 
     LockFreeLinkedListBlock<KeyType, DataType> curr_temp = pmark_cur_ptag.load();
     LockFreeLinkedListBlock<KeyType, DataType> next_temp = cmark_next_ctag.load();
-
     LockFreeLinkedListBlock<KeyType, DataType> expected = {false, next_temp.next}; 
     LockFreeLinkedListBlock<KeyType, DataType> value = {true, next_temp.next};
     if (!((curr_temp.next->mark_next_tag).compare_exchange_weak(expected, value))) {
       continue;
     }
-
     curr_temp = pmark_cur_ptag.load();
     next_temp = cmark_next_ctag.load();
     expected = {false, curr_temp.next}; 
@@ -336,7 +329,6 @@ try_again:
   prev = head;
   pmark_cur_ptag.store(prev->load());  
   
-
   //*hp1 <- curr
   LockFreeLinkedListBlock<KeyType, DataType> temp1 = pmark_cur_ptag.load();
   LockFreeLinkedListNode<KeyType, DataType> *curr_node_ptr1 = temp1.next;
@@ -422,22 +414,26 @@ std::string LockFreeLinkedListWorker<KeyType, DataType>::visual(LockFreeLinkedLi
 
 template <class KeyType, class DataType>
 void LockFreeLinkedListWorker<KeyType, DataType>::print_hp0_hp1_hp2(unsigned id){
-
    if(*hp0 != NULL){
      std::cout << "hp0 from thread : " << id << " Key " << (*hp0)->key << " Data " << (*hp0)->data << "\n";
    }
-
    if(*hp1 != NULL){
      std::cout << "hp1 from thread : " << id << " Key " << (*hp1)->key << " Data " << (*hp1)->data << "\n";
    }
-   
    if(*hp2 != NULL){
      std::cout << "hp2 from thread : " << id << " Key " << (*hp2)->key << " Data " << (*hp2)->data << "\n";
    }
 }
 
 
-
+template <class KeyType, class DataType>
+void LockFreeLinkedListWorker<KeyType, DataType>::print_hazard_pointer_arr(LockFreeLinkedListNode<KeyType, DataType>** hazardPointerArr, unsigned id){
+  for(int i =0; i < NUM_HP; i++){
+    if( hazardPointerArr[i]!= NULL ){
+      std::cout << " hazardPointerArr[i] :thread "<< id  << " Key: Data " << hazardPointerArr[i]->key << ":" << hazardPointerArr[i]->data << "\n";
+    }
+  }
+}
 
 
 
