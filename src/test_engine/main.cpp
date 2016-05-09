@@ -24,6 +24,17 @@
 #include "cycle_timer/cycle_timer.h"
 
 // #define NDEBUG
+#define NUM_HP_PER_THREAD 3
+#define MAX_THREADS 4
+
+#ifndef NUM_HP
+#define NUM_HP NUM_HP_PER_THREAD*MAX_THREADS 
+#endif
+
+#ifndef BATCH_SIZE
+#define BATCH_SIZE 2*NUM_HP 
+#endif
+
 
 // Define the Key and Data type of the Linked-list here.
 typedef int KeyType;
@@ -37,10 +48,13 @@ typedef HashTableWorker<LinkedListHead, LinkedListWorker, KeyType, DataType> Tab
 typedef HashTable<StandardLinkedListHead, KeyType, DataType> StandardTable;
 typedef HashTableWorker<StandardLinkedListHead, StandardLinkedListWorker, KeyType, DataType> StandardTableWorker;
 
-DEFINE_string(testfile, "tests/hello.txt", "Test file to run.");
-DEFINE_int32(num_workers, std::thread::hardware_concurrency(), "Number of worker threads to spin up");
-DEFINE_int32(data_structure, 0, "Which data structure to test. 0 - linked list, 1 - hashtable");
+DEFINE_string(testfile, "tests/load_uniform_10000.txt", "Test file to run.");
+DEFINE_int32(num_workers, 4, "Number of worker threads to spin up");
+DEFINE_int32(data_structure, 1, "Which data structure to test. 0 - linked list, 1 - hashtable");
 
+
+//Define the hazard pointer array
+LockFreeLinkedListNode<KeyType, DataType>** hazard_pointers;
 
 /* Splits a string by a delimiter and returns a vector of the tokens. */
 std::vector<std::string> split( const std::string &str, const char &delim ) {
@@ -77,7 +91,7 @@ std::vector<std::string> split( const std::string &str, const char &delim ) {
  *    print
  */
 template <class Head, class Worker>
-bool process_testline(Head *head, std::vector<std::string> tokens, Worker &worker) {
+bool process_testline(Head *head, std::vector<std::string> tokens, Worker &worker, LockFreeLinkedListNode<KeyType,DataType>** hazard_pointers) {
   KeyType k;
   DataType d;
 
@@ -97,7 +111,7 @@ bool process_testline(Head *head, std::vector<std::string> tokens, Worker &worke
     k = std::stoi(tokens[1]);
     d = tokens[2];
     DLOG(INFO) << "Inserting " << k << ":'" << d << "'...";
-    if (!(worker.insert(head, k, d))) {
+    if (!(worker.insert(head, k, d, hazard_pointers))) {
       DLOG(WARNING) << color_red("Unable to insert node. Possibly key(" + std::to_string(k) + ") already exists.");
       return false;
     } else {
@@ -113,7 +127,7 @@ bool process_testline(Head *head, std::vector<std::string> tokens, Worker &worke
     k = std::stoi(tokens[1]);
     DLOG(INFO) << "Searching by Key: " << k << "...";
     bool expected = (std::stoi(tokens[2]) == 1) ? true : false;
-    if (worker.search(head, k) == expected) {
+    if (worker.search(head, k, hazard_pointers) == expected) {
       return true;
     } else {
       DLOG(WARNING) << color_red("Did not match expected result for key(" + std::to_string(k) + ").");
@@ -128,7 +142,7 @@ bool process_testline(Head *head, std::vector<std::string> tokens, Worker &worke
     }
     k = std::stoi(tokens[1]);
     DLOG(INFO) << "Removing node...";
-    if (!(worker.remove(head, k))) {
+    if (!(worker.remove(head, k, hazard_pointers))) {
       DLOG(WARNING) << color_red("Unable to remove node. Possibly key(" + std::to_string(k) + ") not found.");
       return false;
     } else {
@@ -142,7 +156,7 @@ bool process_testline(Head *head, std::vector<std::string> tokens, Worker &worke
 
   } else if (cmd == "histogram") {
 
-    DLOG(INFO) << color_yellow(worker.histogram(head));
+    //DLOG(INFO) << color_yellow(worker.histogram(head));
     return true;
 
   } else {
@@ -153,14 +167,14 @@ bool process_testline(Head *head, std::vector<std::string> tokens, Worker &worke
 
 
 template <class Head, class Worker>
-bool run_testline(Head *head, std::string testline, Worker &worker) {
+bool run_testline(Head *head, std::string testline, Worker &worker, LockFreeLinkedListNode<KeyType, DataType>** hazard_pointers) {
   DLOG(INFO) << "Testing line: " << color_blue(testline);
 
   // Split line into its tokens
   std::vector<std::string> tokens = split(testline, ' ');
 
   // Run testline
-  bool success = process_testline<Head, Worker>(head, tokens, worker);
+  bool success = process_testline<Head, Worker>(head, tokens, worker, hazard_pointers);
 
   // Print testline results
   DLOG(INFO) << "Testline complete. "
@@ -172,15 +186,19 @@ bool run_testline(Head *head, std::string testline, Worker &worker) {
 
 
 template <class Head, class Worker>
-void worker_start(unsigned id, Head *head, WorkQueue<std::string> *work_queue, bool *done, Barrier *worker_barrier, bool *result) {
+void worker_start(unsigned id, Head *head, WorkQueue<std::string> *work_queue, bool *done, Barrier *worker_barrier, bool *result, LockFreeLinkedListNode<KeyType, DataType>** hazard_pointers) {
   DLOG(INFO) << "Instantiated worker " << id;
   Worker worker;
+
+  //Setting up the hazard pointers
+  worker.set(id, hazard_pointers);
+
   bool has_work;
   std::string testline;
   while (1) {
     has_work = work_queue->check_and_get_work(testline);
     if (has_work) {
-      *result = run_testline<Head, Worker>(head, testline, worker) && *result;
+      *result = run_testline<Head, Worker>(head, testline, worker, hazard_pointers) && *result;
     } else if (*done) {
       break;
     } else {
@@ -196,7 +214,7 @@ void join_all(std::vector<std::thread>& v){
 
 
 template <class Head, class Worker>
-double run_tests(std::string testfile) {
+double run_tests(std::string testfile, LockFreeLinkedListNode<KeyType, DataType>** hazard_pointers) {
   DLOG(INFO) << "Initializing testing environment with " << FLAGS_num_workers << " workers...";
 
   // Initialize data structures
@@ -210,7 +228,7 @@ double run_tests(std::string testfile) {
   // Initialize worker pool
   for (unsigned i = 0; i < FLAGS_num_workers; ++i) {
     result[i] = true;
-    workers.emplace_back(std::thread(worker_start<Head, Worker>, i, &head, &work_queue, &done, &worker_barrier, &result[i]));
+    workers.emplace_back(std::thread(worker_start<Head, Worker>, i, &head, &work_queue, &done, &worker_barrier, &result[i], hazard_pointers));
   }
 
   // Starting the clock
@@ -255,8 +273,13 @@ double run_tests(std::string testfile) {
 
 
 int main(int argc, char *argv[]) {
-  FLAGS_logtostderr = 1;
+  //FLAGS_logtostderr = 1;
   // FLAGS_log_dir = "logs";
+
+  //Define hazard pointer array
+  LockFreeLinkedListNode<KeyType, DataType>** hazard_pointers;
+  hazard_pointers  = new LockFreeLinkedListNode<KeyType, DataType>*[NUM_HP];
+
 
   std::string usage("Usage: " + std::string(argv[0]) +
                     " [options] <test filepath>\n");
@@ -269,16 +292,19 @@ int main(int argc, char *argv[]) {
   google::ParseCommandLineFlags(&argc, &argv, true);
 
   if (FLAGS_data_structure == 0) {
-    double standard_time = run_tests<StandardLinkedListHead, StandardLinkedListWorker>(FLAGS_testfile);
-    double new_time = run_tests<LinkedListHead, LinkedListWorker>(FLAGS_testfile);
-    std::cout << "STANDARD: " << standard_time << std::endl;
-    std::cout << "MEASURED: " << new_time << std::endl;
+    // double standard_time = run_tests<StandardLinkedListHead, StandardLinkedListWorker>(FLAGS_testfile);
+    // double new_time = run_tests<LinkedListHead, LinkedListWorker>(FLAGS_testfile);
+    // std::cout << "STANDARD: " << standard_time << std::endl;
+    // std::cout << "MEASURED: " << new_time << std::endl;
   } else if (FLAGS_data_structure == 1) {
-    double standard_time = run_tests<StandardTable, StandardTableWorker>(FLAGS_testfile);
-    double new_time = run_tests<Table, TableWorker>(FLAGS_testfile);
-    std::cout << "STANDARD: " << standard_time << std::endl;
+    //double standard_time = run_tests<StandardTable, StandardTableWorker>(FLAGS_testfile);
+    double new_time = run_tests<Table, TableWorker>(FLAGS_testfile, hazard_pointers);
+    //std::cout << "STANDARD: " << standard_time << std::endl;
     std::cout << "MEASURED: " << new_time << std::endl;
   }
+
+  //Free hazard pointer array
+  delete[] hazard_pointers;
 
   return 0;
 }
