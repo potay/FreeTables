@@ -10,7 +10,7 @@
 #include <iostream>
 
 #define NUM_HP_PER_THREAD 3
-#define MAX_THREADS 4
+#define MAX_THREADS 32
 
 #ifndef NUM_HP
 #define NUM_HP NUM_HP_PER_THREAD*MAX_THREADS 

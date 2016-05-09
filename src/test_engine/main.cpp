@@ -24,8 +24,8 @@
 #include "cycle_timer/cycle_timer.h"
 
 // #define NDEBUG
-#define NUM_HP_PER_THREAD 3
-#define MAX_THREADS 4
+#define NUM_HP_PER_THREAD 3 
+#define MAX_THREADS 32//You have to modify this  in hashtable.h to ensure its valid.
 
 #ifndef NUM_HP
 #define NUM_HP NUM_HP_PER_THREAD*MAX_THREADS 
@@ -48,8 +48,9 @@ typedef HashTableWorker<LinkedListHead, LinkedListWorker, KeyType, DataType> Tab
 typedef HashTable<StandardLinkedListHead, KeyType, DataType> StandardTable;
 typedef HashTableWorker<StandardLinkedListHead, StandardLinkedListWorker, KeyType, DataType> StandardTableWorker;
 
+
 DEFINE_string(testfile, "tests/load_uniform_10000.txt", "Test file to run.");
-DEFINE_int32(num_workers, 4, "Number of worker threads to spin up");
+DEFINE_int32(num_workers, MAX_THREADS, "Number of worker threads to spin up");
 DEFINE_int32(data_structure, 1, "Which data structure to test. 0 - linked list, 1 - hashtable");
 
 
@@ -213,6 +214,12 @@ void join_all(std::vector<std::thread>& v){
 }
 
 
+/*In order for the test function to evaluate the tests as passing, 
+inserts, deltes and remove must be synchronzied.
+If the test file does not synchronize the tests, the tests will fail on 
+the test function but they are still valid tests.
+*/
+
 template <class Head, class Worker>
 double run_tests(std::string testfile, LockFreeLinkedListNode<KeyType, DataType>** hazard_pointers) {
   DLOG(INFO) << "Initializing testing environment with " << FLAGS_num_workers << " workers...";
@@ -273,6 +280,7 @@ double run_tests(std::string testfile, LockFreeLinkedListNode<KeyType, DataType>
 
 
 int main(int argc, char *argv[]) {
+  //Uncomment this to enable logging.
   //FLAGS_logtostderr = 1;
   // FLAGS_log_dir = "logs";
 
@@ -291,15 +299,8 @@ int main(int argc, char *argv[]) {
 
   google::ParseCommandLineFlags(&argc, &argv, true);
 
-  if (FLAGS_data_structure == 0) {
-    // double standard_time = run_tests<StandardLinkedListHead, StandardLinkedListWorker>(FLAGS_testfile);
-    // double new_time = run_tests<LinkedListHead, LinkedListWorker>(FLAGS_testfile);
-    // std::cout << "STANDARD: " << standard_time << std::endl;
-    // std::cout << "MEASURED: " << new_time << std::endl;
-  } else if (FLAGS_data_structure == 1) {
-    //double standard_time = run_tests<StandardTable, StandardTableWorker>(FLAGS_testfile);
+  if (FLAGS_data_structure == 1) {
     double new_time = run_tests<Table, TableWorker>(FLAGS_testfile, hazard_pointers);
-    //std::cout << "STANDARD: " << standard_time << std::endl;
     std::cout << "MEASURED: " << new_time << std::endl;
   }
 
